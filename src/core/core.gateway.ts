@@ -3,9 +3,8 @@ import {
   OnGatewayConnection,
   OnGatewayDisconnect,
   SubscribeMessage,
-  WebSocketServer,
 } from "@nestjs/websockets";
-import { Server, Socket } from "socket.io";
+import {  Socket } from "socket.io";
 import { SendVote } from "../shared/interfaces/send-vote";
 
 @WebSocketGateway({
@@ -14,9 +13,6 @@ import { SendVote } from "../shared/interfaces/send-vote";
   },
 })
 export class CoreGateway implements OnGatewayConnection, OnGatewayDisconnect {
-  @WebSocketServer()
-  private server: Server;
-
   private readonly clientsMap = new Map<string, string>();
 
   private generateSimpleId(): string {
@@ -45,7 +41,7 @@ export class CoreGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage("send-vote")
   public sendVote(socket: Socket, payload: SendVote): void {
-    this.server.emit(`vote-${payload.group}`, {
+    socket.emit(`vote-${payload.group}`, {
       participant: payload.participant,
     });
   }
