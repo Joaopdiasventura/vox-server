@@ -38,16 +38,21 @@ export class CoreGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @SubscribeMessage("allow-vote")
-  public allowVote(socket: Socket, payload: string): void {
-    const id = this.clientsMap.get(payload);
+  public allowVote(socket: Socket, urnId: string): void {
+    const id = this.clientsMap.get(urnId);
     socket.to(id).emit("vote-allowed");
   }
 
   @SubscribeMessage("send-vote")
-  public sendVote(socket: Socket, payload: SendVote): void {
-    this.server.emit(`vote-${payload.group}`, {
-      participant: payload.participant,
+  public sendVote(_: Socket, vote: SendVote): void {
+    this.server.emit(`vote-${vote.group}`, {
+      participant: vote.participant,
     });
+  }
+
+  @SubscribeMessage("exit-vote")
+  public exitVote(_: Socket, group: string): void {
+    this.server.emit(`exit-${group}`);
   }
 
   public handleDisconnect(socket: Socket): void {
