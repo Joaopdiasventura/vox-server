@@ -56,13 +56,12 @@ jobs:
         run: |
           docker rm -f vox-server || true && \
           docker run -d -p 8080:3000 \
-            -e MONGO_URI="$MONGO_URI" \
-            -e REDIS_URI="$REDIS_URI" \
-            -e EMAIL_ADDRESS="$EMAIL_ADDRESS" \
-            -e EMAIL_PASSWORD="$EMAIL_PASSWORD" \
-            -e JWT_SECRET="$JWT_SECRET" \
-            -e SALTS="$SALTS" \
-            -e FRONTEND_URL="$FRONTEND_URL" \
-            -e URL="$URL" \
+            -e MONGO_URI="${{ secrets.MONGO_URI }}" \
+            -e EMAIL_ADDRESS="${{ secrets.EMAIL_ADDRESS }}" \
+            -e EMAIL_PASSWORD="${{ secrets.EMAIL_PASSWORD }}" \
+            -e JWT_SECRET="${{ secrets.JWT_SECRET }}" \
+            -e SALTS="${{ secrets.SALTS }}" \
+            -e FRONTEND_URL="${{ secrets.FRONTEND_URL }}" \
+            -e URL="${{ secrets.URL }}" \
             --name vox-server jpplay/vox-server:latest
     
