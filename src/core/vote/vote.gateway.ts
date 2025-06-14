@@ -10,7 +10,7 @@ import { SendVote } from "../../shared/interfaces/send-vote";
 
 @WebSocketGateway({
   cors: {
-    origin: process.env.FRONTEND_URL || "*",
+    origin: process.env.FRONTEND_URL || "http://localhost:4200",
   },
 })
 export class VoteGateway implements OnGatewayConnection, OnGatewayDisconnect {
