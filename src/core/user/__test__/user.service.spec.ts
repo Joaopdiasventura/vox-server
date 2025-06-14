@@ -4,6 +4,7 @@ import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { AuthService } from "../../../shared/modules/auth/auth.service";
 import { EventEmitter2 } from "@nestjs/event-emitter";
 import { UtilsService } from "../../../shared/utils/utils.service";
+import { UserGateway } from "../user.gateway";
 
 const mockUser = {
   id: "123",
@@ -20,6 +21,10 @@ const mockUserRepository = {
   findByEmail: jest.fn(),
   update: jest.fn(),
   delete: jest.fn(),
+};
+
+const mockUserGateway = {
+  validateEmail: jest.fn(),
 };
 
 const mockAuthService = {
@@ -46,6 +51,7 @@ describe("UserService", () => {
       providers: [
         UserService,
         { provide: "UserRepository", useValue: mockUserRepository },
+        { provide: UserGateway, useValue: mockUserGateway },
         { provide: AuthService, useValue: mockAuthService },
         { provide: UtilsService, useValue: mockUtilsService },
         { provide: EventEmitter2, useValue: mockEventEmitter },
