@@ -6,6 +6,7 @@ import { VoteSchema } from "./entities/vote.entity";
 import { MongoVoteRepository } from "./repositories/vote.mongo.repository";
 import { ParticipantModule } from "../participant/participant.module";
 import { CommonModule } from "../../shared/modules/common/common.module";
+import { VoteGateway } from "./vote.gateway";
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { CommonModule } from "../../shared/modules/common/common.module";
   controllers: [VoteController],
   providers: [
     VoteService,
+    VoteGateway,
     { provide: "VoteRepository", useClass: MongoVoteRepository },
   ],
 })

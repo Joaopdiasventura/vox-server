@@ -6,14 +6,14 @@ import {
   WebSocketServer,
 } from "@nestjs/websockets";
 import { Server, Socket } from "socket.io";
-import { SendVote } from "../shared/interfaces/send-vote";
+import { SendVote } from "../../shared/interfaces/send-vote";
 
 @WebSocketGateway({
   cors: {
     origin: process.env.FRONTEND_URL || "*",
   },
 })
-export class CoreGateway implements OnGatewayConnection, OnGatewayDisconnect {
+export class VoteGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   private server: Server;
 
