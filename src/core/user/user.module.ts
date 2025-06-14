@@ -6,6 +6,7 @@ import { UserSchema } from "./entities/user.entity";
 import { MongoUserRepository } from "./repositories/user.mongo.repository";
 import { AuthModule } from "../../shared/modules/auth/auth.module";
 import { UtilsModule } from "src/shared/utils/utils.module";
+import { UserGateway } from "./user.gateway";
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { UtilsModule } from "src/shared/utils/utils.module";
   controllers: [UserController],
   providers: [
     UserService,
+    UserGateway,
     { provide: "UserRepository", useClass: MongoUserRepository },
   ],
   exports: [UserService],

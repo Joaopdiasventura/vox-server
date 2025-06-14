@@ -14,11 +14,13 @@ import { AuthService } from "../../shared/modules/auth/auth.service";
 import { Message } from "../../shared/interfaces/message";
 import { EventEmitter2 } from "@nestjs/event-emitter";
 import { UtilsService } from "../../shared/utils/utils.service";
+import { UserGateway } from "./user.gateway";
 
 @Injectable()
 export class UserService {
   public constructor(
     @Inject("UserRepository") private readonly userRepository: UserRepository,
+    private readonly userGateway: UserGateway,
     private readonly authService: AuthService,
     private readonly utilsService: UtilsService,
     private readonly eventEmitter: EventEmitter2,
@@ -103,12 +105,14 @@ export class UserService {
   }
 
   public async validateEmail(token: string): Promise<string> {
-    const { _id, isEmailValid } = await this.decodeToken(token);
+    const { _id, email, isEmailValid } = await this.decodeToken(token);
 
     if (isEmailValid)
       return this.utilsService.createAlertResponse("Sua conta já foi validada");
 
     await this.userRepository.update(_id, { isEmailValid: true });
+
+    this.userGateway.validateEmail(email);
 
     return this.utilsService.createAlertResponse("Conta validada com sucesso");
   }
