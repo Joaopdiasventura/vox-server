@@ -38,30 +38,81 @@ jobs:
       - name: Login to Docker Hub
         run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
-      - name: Build docker image
+      - name: Build Server image
         run: docker build -t jpplay/vox-server .
 
-      - name: Push docker image
+      - name: Build and tag Load Balancer load-balancer image
+        run: docker build -t jpplay/vox-load-balancer ./nginx
+
+      - name: Push Server image
         run: docker push jpplay/vox-server:latest
 
-  deploy:
-    if: github.ref == 'refs/heads/main'
-    needs: docker_push
-    runs-on: self-hosted
-    steps:
-      - name: Pull vox image from Docker Hub
-        run: docker pull jpplay/vox-server:latest
+      - name: Push Load Balancer image
+        run: docker push jpplay/vox-load-balancer:latest
 
-      - name: Run the first docker container
-        run: |
-          docker rm -f vox-server || true && \
-          docker run -d -p 8080:3000 \
-            -e MONGO_URI="${{ secrets.MONGO_URI }}" \
-            -e EMAIL_ADDRESS="${{ secrets.EMAIL_ADDRESS }}" \
-            -e EMAIL_PASSWORD="${{ secrets.EMAIL_PASSWORD }}" \
-            -e JWT_SECRET="${{ secrets.JWT_SECRET }}" \
-            -e SALTS="${{ secrets.SALTS }}" \
-            -e FRONTEND_URL="${{ secrets.FRONTEND_URL }}" \
-            -e URL="${{ secrets.URL }}" \
-            --name vox-server jpplay/vox-server:latest
+  deploy:
+  if: github.ref == 'refs/heads/main'
+  needs: docker_push
+  runs-on: self-hosted
+  steps:
+    - name: Checkout Code
+      uses: actions/checkout@v3
+
+    - name: Login to Docker Hub
+      run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
+    - name: Pull images
+      run: |
+        docker pull jpplay/vox-server:latest
+        docker pull jpplay/vox-load-balancer:latest
+
+    - name: Stop and remove old containers
+      run: |
+        docker rm -f server-1 server-2 server-3 load-balancer || true
+
+    - name: Run server-1
+      run: |
+        docker run -d --name server-1 \
+          -e MONGO_URI="${{ secrets.MONGO_URI }}" \
+          -e EMAIL_ADDRESS="${{ secrets.EMAIL_ADDRESS }}" \
+          -e EMAIL_PASSWORD="${{ secrets.EMAIL_PASSWORD }}" \
+          -e JWT_SECRET="${{ secrets.JWT_SECRET }}" \
+          -e SALTS="${{ secrets.SALTS }}" \
+          -e FRONTEND_URL="${{ secrets.FRONTEND_URL }}" \
+          -e URL="${{ secrets.URL }}" \
+          jpplay/vox-server:latest
+
+    - name: Run server-2
+      run: |
+        docker run -d --name server-2 \
+          -e MONGO_URI="${{ secrets.MONGO_URI }}" \
+          -e EMAIL_ADDRESS="${{ secrets.EMAIL_ADDRESS }}" \
+          -e EMAIL_PASSWORD="${{ secrets.EMAIL_PASSWORD }}" \
+          -e JWT_SECRET="${{ secrets.JWT_SECRET }}" \
+          -e SALTS="${{ secrets.SALTS }}" \
+          -e FRONTEND_URL="${{ secrets.FRONTEND_URL }}" \
+          -e URL="${{ secrets.URL }}" \
+          jpplay/vox-server:latest
+
+    - name: Run server-3
+      run: |
+        docker run -d --name server-3 \
+          -e MONGO_URI="${{ secrets.MONGO_URI }}" \
+          -e EMAIL_ADDRESS="${{ secrets.EMAIL_ADDRESS }}" \
+          -e EMAIL_PASSWORD="${{ secrets.EMAIL_PASSWORD }}" \
+          -e JWT_SECRET="${{ secrets.JWT_SECRET }}" \
+          -e SALTS="${{ secrets.SALTS }}" \
+          -e FRONTEND_URL="${{ secrets.FRONTEND_URL }}" \
+          -e URL="${{ secrets.URL }}" \
+          jpplay/vox-server:latest
+
+    - name: Run NGINX load-balancer
+      run: |
+        docker run -d --name load-balancer -p 80:80 \
+          -e SERVER_1=server-1:3000 \
+          -e SERVER_2=server-2:3000 \
+          -e SERVER_3=server-3:3000 \
+          --link server-1 --link server-2 --link server-3 \
+          jpplay/vox-load-balancer:latest
+
     
