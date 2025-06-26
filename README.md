@@ -1,99 +1,575 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+FORMAT: 1A
+HOST: http://localhost:4200
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://coveralls.io/github/nestjs/nest?branch=master" target="_blank"><img src="https://coveralls.io/repos/github/nestjs/nest/badge.svg?branch=master#9" alt="Coverage" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+# API VOX
 
-## Description
+API de um sistema de urna eletrônica, responsável por gerenciar criações de usuários, grupos, votações e resultados utilizando web view.
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+# GROUP User
 
-## Project setup
+## User [/user]
 
-```bash
-$ npm install
-```
+### Create [POST]
 
-## Compile and run the project
++ Request (application/json)
+    + Body
 
-```bash
-# development
-$ npm run start
+            {
+              "name": String,
+              "email": String,
+              "password": String,
+              "isValidEmail": Boolean
+            }
 
-# watch mode
-$ npm run start:dev
++ Response 201 (application/json)
+    + Body
 
-# production mode
-$ npm run start:prod
-```
+            {
+                "message": "Conta criada com sucesso",
+                "user": userObject,
+                "token",
+            }
 
-## Run tests
++ Response 400 (application/json)
+    + Attributes (Error)  
 
-```bash
-# unit tests
-$ npm run test
+## Login [/user/login]
 
-# e2e tests
-$ npm run test:e2e
+### Login [POST]
 
-# test coverage
-$ npm run test:cov
-```
++ Request (application/json)
+    + Body
 
-## Deployment
+            {
+              "email": String,
+              "password": String
+            }
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
++ Response 200 (application/json)
+    + Body
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+            {
+                "message": "Login realizado com sucesso",
+                "user": userObject,
+                "token",
+            }
 
-```bash
-$ npm install -g mau
-$ mau deploy
-```
++ Response 400 (application/json)
+    + Attributes (Error)  
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+## DecodeToken [/user/decodeToken/{token}]
 
-## Resources
+### DecodeToken [GET]
 
-Check out a few resources that may come in handy when working with NestJS:
++ Parameters
+    + token: `jwt.token.aqui` (string) - Token JWT válido
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
++ Response 200 (application/json)
+    + Body
 
-## Support
+            {
+              "id": String,
+              "name": String,
+              "email": String,
+              "isEmailValid": Boolean
+            }
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
++ Response 400 (application/json)
+    + Attributes (Error)  
 
-## Stay in touch
+## ValidateEmail [/user/validateEmail/{token}]
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+### ValidateEmail [PATCH]
 
-## License
++ Parameters
+    + token: `verificacao-token` (string) - Validação enviada para o email do usuário
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
++ Response 200 (application/json)
+    + Body
+
+            {
+              "mensagem": "Email validado com sucesso"
+            }
+
++ Response 400 (application/json)
+    + Attributes (Error)  
+
+## Update [/user/{id}]
+
+### Update [PATCH]
+
++ Parameters
+    + id: `60af7a8f5b5f5b001f1a5d3e` (string) - ID do usuário (Mongo ObjectId)
+
++ Request (application/json)
+    + Headers
+
+            Authorization: Bearer {token}
+
+    + Body
+
+            {
+              "name": String,
+              "password": String
+            }
+
++ Response 200 (application/json)
+    + Body
+
+            {
+              "mensagem": "Dados da conta atualizados com sucesso"
+            }
+
++ Response 400 (application/json)
+    + Attributes (Error)
+
+### Delete [DELETE]
+
++ Parameters
+    + id: `60af7a8f5b5f5b001f1a5d3e` (string) - ID do usuário (Mongo ObjectId)
+
++ Request
+    + Headers
+
+            Authorization: Bearer {token}
+
++ Response 200 (application/json)
+    + Body
+
+            {
+              "mensagem": "Conta removida com sucesso"
+            }
+
+# Group Vote
+
+## Create [/vote]
+
+### create [POST]
+
+Registra um novo voto na votação.
+
++ Request (application/json)
+    + Body
+
+            {
+              "participant": String,
+              "candidate": String,
+              "group": String
+            }
+
++ Response 201 (application/json)
+    + Body
+
+            {
+              "message": "Voto registrado com sucesso"
+            }
+
++ Response 400 (application/json)
+    + Body
+
+            {
+              "statusCode": 400,
+              "message": "Participante não encontrado",
+              "error": "Bad Request"
+            }
+
+# Group Participant
+
+## Create [/participant]
+
+### create [POST]
+
+Registra um novo participante vinculado a um grupo. Autenticação necessária.
+
++ Request (application/json)
+    + Headers
+
+            Authorization: Bearer {token}
+
+    + Body
+
+            {
+              "name": String,
+              "group": String
+            }
+
++ Response 201 (application/json)
+    + Body
+
+            {
+              "message": "Participante registrado com sucesso"
+            }
+
++ Response 400 (application/json)
+    + Body
+
+            {
+              "statusCode": 400,
+              "message": "Grupo não encontrado",
+              "error": "Bad Request"
+            }
+
+
+## findAllByGroup [/participant/findAllByGroup/{group}]
+
+### findAllByGroup [GET]
+
+Retorna todos os participantes vinculados a um grupo. Autenticação necessária.
+
++ Parameters
+    + group: `665d4b5ca343f210c8a88589` (string) - ID do grupo
+
++ Request
+    + Headers
+
+            Authorization: Bearer {token}
+
++ Response 200 (application/json)
+    + Body
+
+            [
+              {
+                "id": Int,
+                "name": String,
+                "group": String
+              }
+            ]
+
+
+## findManyByGroup [/participant/findManyByGroup/{group}/{page}]
+
+### findManyByGroup [GET]
+
+Retorna uma página de participantes de um grupo. Autenticação necessária.
+
++ Parameters
+    + group: `665d4b5ca343f210c8a88589` (string)
+    + page: `0` (number)
+
++ Request
+    + Headers
+
+            Authorization: Bearer {token}
+
++ Response 200 (application/json)
+    + Body
+
+            [
+              {
+                "id": String,
+                "name": String,
+                "group": String
+              }
+            ]
+
+## ParticipantById [/participant/{id}]
+
+### update [PATCH]
+
+Atualiza os dados de um participante. Não é permitido alterar o grupo. Autenticação necessária.
+
++ Parameters
+    + id: `60af7a8f5b5f5b001f1a5d3e` (string)
+
++ Request (application/json)
+    + Headers
+
+            Authorization: Bearer {token}
+
+    + Body
+
+            {
+              "name": String
+            }
+
++ Response 200 (application/json)
+    + Body
+
+            {
+              "message": "Participante atualizado com sucesso"
+            }
+
+
+### delete [DELETE]
+
+Remove um participante pelo seu ID. Autenticação necessária.
+
++ Parameters
+    + id: `60af7a8f5b5f5b001f1a5d3e` (string)
+
++ Request
+    + Headers
+
+            Authorization: Bearer {token}
+
++ Response 200 (application/json)
+    + Body
+
+            {
+              "message": "Participante removido com sucesso"
+            }
+
+# Group Group
+
+## Create [/group]
+
+### create [POST]
+
+Cria um novo grupo. Autenticação obrigatória.
+
++ Request (application/json)
+    + Headers
+
+            Authorization: Bearer {token}
+
+    + Body
+
+            {
+              "name": String,
+              "user": String,
+              "group": String // opcional, caso seja subgrupo
+            }
+
++ Response 201 (application/json)
+    + Body
+
+            {
+              "message": "Grupo criado com sucesso"
+            }
+
++ Response 400 (application/json)
+    + Body
+
+            {
+              "statusCode": 400,
+              "message": "Usuário ou grupo pai não encontrado",
+              "error": "Bad Request"
+            }
+
+## findManyByUser [/group/findManyByUser/{user}/{page}]
+
+### findManyByUser [GET]
+
+Lista grupos criados por um usuário, paginados. Autenticação obrigatória.
+
++ Parameters
+    + user: `665d4b5ca343f210c8a88570` (string)
+    + page: `0` (number)
+
++ Request
+    + Headers
+
+            Authorization: Bearer {token}
+
++ Response 200 (application/json)
+    + Body
+
+            [
+              {
+                "id": String,
+                "name": String
+              },
+              {
+                "id": String,
+                "name": String
+              }
+            ]
+
+## findManyByGroup [/group/findManyByGroup/{group}/{page}]
+
+### findManyByGroup [GET]
+
+Lista subgrupos de um grupo, paginados. Autenticação obrigatória.
+
++ Parameters
+    + group: `665d4b5ca343f210c8a88589` (string)
+    + page: `0` (number)
+
++ Request
+    + Headers
+
+            Authorization: Bearer {token}
+
++ Response 200 (application/json)
+    + Body
+
+            [
+              {
+                "id": String,
+                "name": String
+              }
+            ]
+
+## findAllWithoutSubGroups [/group/findAllWithoutSubGroups/{user}]
+
+### findAllWithoutSubGroups [GET]
+
+Retorna todos os grupos do usuário que não têm subgrupos. Autenticação obrigatória.
+
++ Parameters
+    + user: `665d4b5ca343f210c8a88570` (string)
+
++ Request
+    + Headers
+
+            Authorization: Bearer {token}
+
++ Response 200 (application/json)
+    + Body
+
+            [
+              {
+                "id": String,
+                "name": String
+              }
+            ]
+
+## findAllWithoutParticipants [/group/findAllWithoutParticipants/{user}]
+
+### findAllWithoutParticipants [GET]
+
+Retorna todos os grupos do usuário que não possuem participantes. Autenticação obrigatória.
+
++ Parameters
+    + user: `665d4b5ca343f210c8a88570` (string)
+
++ Request
+    + Headers
+
+            Authorization: Bearer {token}
+
++ Response 200 (application/json)
+    + Body
+
+            [
+              {
+                "id": String,
+                "name": String
+              }
+            ]
+
+## findAllWithParticipants [/group/findAllWithParticipants/{user}]
+
+### findAllWithParticipants [GET]
+
+Retorna todos os grupos do usuário que possuem participantes. Autenticação obrigatória.
+
++ Parameters
+    + user: `665d4b5ca343f210c8a88570` (string)
+
++ Request
+    + Headers
+
+            Authorization: Bearer {token}
+
++ Response 200 (application/json)
+    + Body
+
+            [
+              {
+                "id": String,
+                "name": String
+              }
+            ]
+
+## getResult [/group/getResult/{group}]
+
+### getResult [GET]
+
+Retorna o resultado de votos em um grupo. Autenticação obrigatória.
+
++ Parameters
+    + group: `665d4b5ca343f210c8a88589` (string)
+
++ Request
+    + Headers
+
+            Authorization: Bearer {token}
+
++ Response 200 (application/json)
+    + Body
+
+            {
+              "groupId": "665d4b5ca343f210c8a88589",
+              "totalVotes": 50,
+              "results": [
+                { "candidate": "Candidato 1", "votes": 30 },
+                { "candidate": "Candidato 2", "votes": 20 }
+              ]
+            }
+
+## GroupById [/group/{id}]
+
+### update [PATCH]
+
+Atualiza informações do grupo. Autenticação obrigatória.
+
++ Parameters
+    + id: `665d4b5ca343f210c8a88589` (string)
+
++ Request (application/json)
+    + Headers
+
+            Authorization: Bearer {token}
+
+    + Body
+
+              {
+                "name": String,
+                "group": String  // novo grupo pai opcional
+              }
+
++ Response 200 (application/json)
+    + Body
+
+            {
+              "message": "Grupo atualizado com sucesso"
+            }
+
+### delete [DELETE]
+
+Remove um grupo pelo seu ID. Autenticação obrigatória.
+
++ Parameters
+    + id: `665d4b5ca343f210c8a88589` (string)
+
++ Request
+    + Headers
+
+            Authorization: Bearer {token}
+
++ Response 200 (application/json)
+    + Body
+
+            {
+              "message": "Grupo deletado com sucesso"
+            }
+
+### findById [GET]
+
+Retorna os dados de um grupo. Autenticação obrigatória.
+
++ Parameters
+    + id: `665d4b5ca343f210c8a88589` (string)
+
++ Request
+    + Headers
+
+            Authorization: Bearer {token}
+
++ Response 200 (application/json)
+    + Body
+
+            {
+              "id": String,
+              "name": String,
+              "user":  String
+            }
+
+# Data Structures
+
+## Error (object)
++ statusCode: 400 (number)
++ message: "Erro de validação" (string)
++ error: "Bad Request" (string)
