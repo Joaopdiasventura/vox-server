@@ -6,12 +6,16 @@ services:
       SERVER_1: server-1:3000
       SERVER_2: server-2:3000
       SERVER_3: server-3:3000
+      SERVER_4: server-4:3000
+      SERVER_5: server-5:3000
     ports:
-      - "80:80"
+      - "3000:80"
     depends_on:
       - server-1
       - server-2
       - server-3
+      - server-4
+      - server-5
 
   server-1:
     build:
@@ -36,6 +40,28 @@ services:
       - db
 
   server-3:
+    build:
+      context: .
+    environment:
+      NODE_ENV: development
+      MONGO_URI: mongodb://db:27017/vox
+    expose:
+      - "3000"
+    depends_on:
+      - db
+
+  server-4:
+    build:
+      context: .
+    environment:
+      NODE_ENV: development
+      MONGO_URI: mongodb://db:27017/vox
+    expose:
+      - "3000"
+    depends_on:
+      - db
+
+  server-5:
     build:
       context: .
     environment:

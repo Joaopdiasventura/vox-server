@@ -70,6 +70,7 @@ jobs:
         run: |
           docker rm -f server-1 || true
           docker run -d --name server-1 \
+            --cpus="0.15" \
             -e MONGO_URI="${{ secrets.MONGO_URI }}" \
             -e EMAIL_ADDRESS="${{ secrets.EMAIL_ADDRESS }}" \
             -e EMAIL_PASSWORD="${{ secrets.EMAIL_PASSWORD }}" \
@@ -83,6 +84,7 @@ jobs:
         run: |
           docker rm -f server-2 || true
           docker run -d --name server-2 \
+            --cpus="0.15" \
             -e MONGO_URI="${{ secrets.MONGO_URI }}" \
             -e EMAIL_ADDRESS="${{ secrets.EMAIL_ADDRESS }}" \
             -e EMAIL_PASSWORD="${{ secrets.EMAIL_PASSWORD }}" \
@@ -96,6 +98,35 @@ jobs:
         run: |
           docker rm -f server-3 || true
           docker run -d --name server-3 \
+            --cpus="0.15" \
+            -e MONGO_URI="${{ secrets.MONGO_URI }}" \
+            -e EMAIL_ADDRESS="${{ secrets.EMAIL_ADDRESS }}" \
+            -e EMAIL_PASSWORD="${{ secrets.EMAIL_PASSWORD }}" \
+            -e JWT_SECRET="${{ secrets.JWT_SECRET }}" \
+            -e SALTS="${{ secrets.SALTS }}" \
+            -e FRONTEND_URL="${{ secrets.FRONTEND_URL }}" \
+            -e URL="${{ secrets.URL }}" \
+            jpplay/vox-server:latest
+
+      - name: Deploy server-4
+        run: |
+          docker rm -f server-4 || true
+          docker run -d --name server-4 \
+            --cpus="0.15" \
+            -e MONGO_URI="${{ secrets.MONGO_URI }}" \
+            -e EMAIL_ADDRESS="${{ secrets.EMAIL_ADDRESS }}" \
+            -e EMAIL_PASSWORD="${{ secrets.EMAIL_PASSWORD }}" \
+            -e JWT_SECRET="${{ secrets.JWT_SECRET }}" \
+            -e SALTS="${{ secrets.SALTS }}" \
+            -e FRONTEND_URL="${{ secrets.FRONTEND_URL }}" \
+            -e URL="${{ secrets.URL }}" \
+            jpplay/vox-server:latest
+
+      - name: Deploy server-5
+        run: |
+          docker rm -f server-5 || true
+          docker run -d --name server-5 \
+            --cpus="0.15" \
             -e MONGO_URI="${{ secrets.MONGO_URI }}" \
             -e EMAIL_ADDRESS="${{ secrets.EMAIL_ADDRESS }}" \
             -e EMAIL_PASSWORD="${{ secrets.EMAIL_PASSWORD }}" \
@@ -109,8 +140,11 @@ jobs:
         run: |
           docker rm -f load-balancer || true
           docker run -d --name load-balancer -p 80:80 \
+            --cpus="0.2" \
             -e SERVER_1=server-1:3000 \
             -e SERVER_2=server-2:3000 \
             -e SERVER_3=server-3:3000 \
-            --link server-1 --link server-2 --link server-3 \
+            -e SERVER_4=server-4:3000 \
+            -e SERVER_5=server-5:3000 \
+            --link server-1 --link server-2 --link server-3 --link server-4 --link server-5 \
             jpplay/vox-load-balancer:latest
