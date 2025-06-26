@@ -66,12 +66,9 @@ jobs:
         docker pull jpplay/vox-server:latest
         docker pull jpplay/vox-load-balancer:latest
 
-    - name: Stop and remove old containers
+    - name: Deploy server-1
       run: |
-        docker rm -f server-1 server-2 server-3 load-balancer || true
-
-    - name: Run server-1
-      run: |
+        docker rm -f server-1 || true
         docker run -d --name server-1 \
           -e MONGO_URI="${{ secrets.MONGO_URI }}" \
           -e EMAIL_ADDRESS="${{ secrets.EMAIL_ADDRESS }}" \
@@ -82,8 +79,9 @@ jobs:
           -e URL="${{ secrets.URL }}" \
           jpplay/vox-server:latest
 
-    - name: Run server-2
+    - name: Deploy server-2
       run: |
+        docker rm -f server-2 || true
         docker run -d --name server-2 \
           -e MONGO_URI="${{ secrets.MONGO_URI }}" \
           -e EMAIL_ADDRESS="${{ secrets.EMAIL_ADDRESS }}" \
@@ -94,8 +92,9 @@ jobs:
           -e URL="${{ secrets.URL }}" \
           jpplay/vox-server:latest
 
-    - name: Run server-3
+    - name: Deploy server-3
       run: |
+        docker rm -f server-3 || true
         docker run -d --name server-3 \
           -e MONGO_URI="${{ secrets.MONGO_URI }}" \
           -e EMAIL_ADDRESS="${{ secrets.EMAIL_ADDRESS }}" \
@@ -106,13 +105,15 @@ jobs:
           -e URL="${{ secrets.URL }}" \
           jpplay/vox-server:latest
 
-    - name: Run NGINX load-balancer
+    - name: Deploy load-balancer
       run: |
+        docker rm -f load-balancer || true
         docker run -d --name load-balancer -p 80:80 \
           -e SERVER_1=server-1:3000 \
           -e SERVER_2=server-2:3000 \
           -e SERVER_3=server-3:3000 \
           --link server-1 --link server-2 --link server-3 \
           jpplay/vox-load-balancer:latest
+
 
     
