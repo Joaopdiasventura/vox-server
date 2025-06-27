@@ -20,11 +20,15 @@ export class MongoGroupRepository implements GroupRepository {
   }
 
   public async findManyByUser(user: string, page: number): Promise<Group[]> {
-    return await this.groupModel
-      .find({ user, group: { $exists: false } })
+    const pageSize = 10;
+    return this.groupModel
+      .find({
+        user,
+        $or: [{ group: { $exists: false } }, { group: null }],
+      })
       .select("-user")
-      .skip(10 * page)
-      .limit(10)
+      .skip(page * pageSize)
+      .limit(pageSize)
       .sort({ name: 1 })
       .exec();
   }
