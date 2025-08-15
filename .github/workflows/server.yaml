@@ -41,36 +41,29 @@ jobs:
       - name: Build Server image
         run: docker build -t jpplay/vox-server .
 
-      - name: Build and tag Load Balancer load-balancer image
-        run: docker build -t jpplay/vox-load-balancer ./nginx
-
       - name: Push Server image
         run: docker push jpplay/vox-server:latest
 
-      - name: Push Load Balancer image
-        run: docker push jpplay/vox-load-balancer:latest
-
   deploy:
-    if: github.ref == 'refs/heads/main'
-    needs: docker_push
     runs-on: self-hosted
+    needs: docker_push
+
     steps:
-      - name: Checkout Code
+      - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Login to Docker Hub
+      - name: Login to DockerHub
         run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
-      - name: Pull images
-        run: |
-          docker pull jpplay/vox-server:latest
-          docker pull jpplay/vox-load-balancer:latest
+      - name: Create Docker network if not exists
+        run: docker network create traefik-net || true
 
       - name: Deploy server-1
         run: |
           docker rm -f server-1 || true
           docker run -d --name server-1 \
             --cpus="0.15" \
+            --network traefik-net \
             -e MONGO_URI="${{ secrets.MONGO_URI }}" \
             -e EMAIL_ADDRESS="${{ secrets.EMAIL_ADDRESS }}" \
             -e EMAIL_PASSWORD="${{ secrets.EMAIL_PASSWORD }}" \
@@ -78,6 +71,11 @@ jobs:
             -e SALTS="${{ secrets.SALTS }}" \
             -e FRONTEND_URL="${{ secrets.FRONTEND_URL }}" \
             -e URL="${{ secrets.URL }}" \
+            --label "traefik.enable=true" \
+            --label "traefik.http.routers.api.rule=Host("${{ secrets.DOMAIN }}") && PathPrefix(`/`)" \
+            --label "traefik.http.routers.api.entrypoints=websecure" \
+            --label "traefik.http.routers.api.tls.certresolver=myresolver" \
+            --label "traefik.http.services.api.loadbalancer.server.port=3000" \
             jpplay/vox-server:latest
 
       - name: Deploy server-2
@@ -85,6 +83,7 @@ jobs:
           docker rm -f server-2 || true
           docker run -d --name server-2 \
             --cpus="0.15" \
+            --network traefik-net \
             -e MONGO_URI="${{ secrets.MONGO_URI }}" \
             -e EMAIL_ADDRESS="${{ secrets.EMAIL_ADDRESS }}" \
             -e EMAIL_PASSWORD="${{ secrets.EMAIL_PASSWORD }}" \
@@ -92,6 +91,11 @@ jobs:
             -e SALTS="${{ secrets.SALTS }}" \
             -e FRONTEND_URL="${{ secrets.FRONTEND_URL }}" \
             -e URL="${{ secrets.URL }}" \
+            --label "traefik.enable=true" \
+            --label "traefik.http.routers.api.rule=Host("${{ secrets.DOMAIN }}") && PathPrefix(`/`)" \
+            --label "traefik.http.routers.api.entrypoints=websecure" \
+            --label "traefik.http.routers.api.tls.certresolver=myresolver" \
+            --label "traefik.http.services.api.loadbalancer.server.port=3000" \
             jpplay/vox-server:latest
 
       - name: Deploy server-3
@@ -99,6 +103,7 @@ jobs:
           docker rm -f server-3 || true
           docker run -d --name server-3 \
             --cpus="0.15" \
+            --network traefik-net \
             -e MONGO_URI="${{ secrets.MONGO_URI }}" \
             -e EMAIL_ADDRESS="${{ secrets.EMAIL_ADDRESS }}" \
             -e EMAIL_PASSWORD="${{ secrets.EMAIL_PASSWORD }}" \
@@ -106,6 +111,11 @@ jobs:
             -e SALTS="${{ secrets.SALTS }}" \
             -e FRONTEND_URL="${{ secrets.FRONTEND_URL }}" \
             -e URL="${{ secrets.URL }}" \
+            --label "traefik.enable=true" \
+            --label "traefik.http.routers.api.rule=Host("${{ secrets.DOMAIN }}") && PathPrefix(`/`)" \
+            --label "traefik.http.routers.api.entrypoints=websecure" \
+            --label "traefik.http.routers.api.tls.certresolver=myresolver" \
+            --label "traefik.http.services.api.loadbalancer.server.port=3000" \
             jpplay/vox-server:latest
 
       - name: Deploy server-4
@@ -113,6 +123,7 @@ jobs:
           docker rm -f server-4 || true
           docker run -d --name server-4 \
             --cpus="0.15" \
+            --network traefik-net \
             -e MONGO_URI="${{ secrets.MONGO_URI }}" \
             -e EMAIL_ADDRESS="${{ secrets.EMAIL_ADDRESS }}" \
             -e EMAIL_PASSWORD="${{ secrets.EMAIL_PASSWORD }}" \
@@ -120,13 +131,19 @@ jobs:
             -e SALTS="${{ secrets.SALTS }}" \
             -e FRONTEND_URL="${{ secrets.FRONTEND_URL }}" \
             -e URL="${{ secrets.URL }}" \
+            --label "traefik.enable=true" \
+            --label "traefik.http.routers.api.rule=Host("${{ secrets.DOMAIN }}") && PathPrefix(`/`)" \
+            --label "traefik.http.routers.api.entrypoints=websecure" \
+            --label "traefik.http.routers.api.tls.certresolver=myresolver" \
+            --label "traefik.http.services.api.loadbalancer.server.port=3000" \
             jpplay/vox-server:latest
 
-      - name: Deploy server-5
+      - name: Deploy server-5 (dedicado /socket.io e /user)
         run: |
           docker rm -f server-5 || true
           docker run -d --name server-5 \
             --cpus="0.15" \
+            --network traefik-net \
             -e MONGO_URI="${{ secrets.MONGO_URI }}" \
             -e EMAIL_ADDRESS="${{ secrets.EMAIL_ADDRESS }}" \
             -e EMAIL_PASSWORD="${{ secrets.EMAIL_PASSWORD }}" \
@@ -134,17 +151,19 @@ jobs:
             -e SALTS="${{ secrets.SALTS }}" \
             -e FRONTEND_URL="${{ secrets.FRONTEND_URL }}" \
             -e URL="${{ secrets.URL }}" \
+            --label "traefik.enable=true" \
+            --label "traefik.http.routers.realtime.rule=Host("${{ secrets.DOMAIN }}") && (PathPrefix(`/socket.io/`) || PathPrefix(`/user`))" \
+            --label "traefik.http.routers.realtime.entrypoints=websecure" \
+            --label "traefik.http.routers.realtime.tls.certresolver=myresolver" \
+            --label "traefik.http.services.realtime.loadbalancer.server.port=3000" \
             jpplay/vox-server:latest
 
-      - name: Deploy load-balancer
+      - name: Deploy reverse proxy
         run: |
-          docker rm -f load-balancer || true
-          docker run -d --name load-balancer -p 80:80 \
-            --cpus="0.2" \
-            -e SERVER_1=server-1:3000 \
-            -e SERVER_2=server-2:3000 \
-            -e SERVER_3=server-3:3000 \
-            -e SERVER_4=server-4:3000 \
-            -e SERVER_5=server-5:3000 \
-            --link server-1 --link server-2 --link server-3 --link server-4 --link server-5 \
-            jpplay/vox-load-balancer:latest
+          docker rm -f traefik || true
+          docker run -d --name traefik -p 80:80 -p 443:443 -p 8080:8080 \
+              -v "${{ github.workspace }}/traefik.yml:/etc/traefik/traefik.yml:ro" \
+              -v /etc/traefik/letsencrypt:/letsencrypt \
+              -v /var/run/docker.sock:/var/run/docker.sock:ro \
+              -v /etc/traefik/config:/etc/traefik/config \
+              traefik:v3.2
