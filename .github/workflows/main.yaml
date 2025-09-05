@@ -1,0 +1,209 @@
+name: Continuous Integration and Deployment
+
+on:
+  push:
+    branches:
+      - "**"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: npm
+      - name: Install
+        run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Build
+        run: npm run build
+
+  docker_push:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    needs: test
+    env:
+      IMAGE_NAME: jpplay/vox-server
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=latest
+            type=sha,format=long
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    runs-on: self-hosted
+    needs: docker_push
+    env:
+      IMAGE: jpplay/vox-server:latest
+      ROLLBACK_TAG: jpplay/vox-server:prev
+      DOMAIN: ${{ secrets.DOMAIN }}
+      MONGO_URI: ${{ secrets.MONGO_URI }}
+      EMAIL_ADDRESS: ${{ secrets.EMAIL_ADDRESS }}
+      EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
+      JWT_SECRET: ${{ secrets.JWT_SECRET }}
+      SALTS: ${{ secrets.SALTS }}
+      FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
+      URL: ${{ secrets.URL }}
+      REPLICAS: 4
+      CPU_LIMIT: "0.15"
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Login to Docker Hub
+        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
+      - name: Ensure Docker network
+        run: docker network create traefik-net || true
+
+      - name: Snapshot current image for rollback
+        shell: bash
+        run: |
+          ID=$(docker inspect -f '{{.Image}}' server-1 2>/dev/null || true)
+          if [ -n "$ID" ]; then
+            docker tag "$ID" "$ROLLBACK_TAG" || true
+            echo "Saved previous image as $ROLLBACK_TAG"
+          else
+            echo "No existing container image to snapshot"
+          fi
+
+      - name: Pull latest image
+        run: docker pull "$IMAGE"
+
+      - name: Deploy latest image
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          cat > /tmp/deploy_fn.sh <<'EOF'
+          deploy_with_image() {
+            IMG="$1"
+            for i in $(seq 1 "${REPLICAS}"); do
+              docker rm -f "server-$i" || true
+              docker run -d --name "server-$i" \
+                --cpus="${CPU_LIMIT}" \
+                --restart unless-stopped \
+                --network traefik-net \
+                -e MONGO_URI="$MONGO_URI" \
+                -e EMAIL_ADDRESS="$EMAIL_ADDRESS" \
+                -e EMAIL_PASSWORD="$EMAIL_PASSWORD" \
+                -e JWT_SECRET="$JWT_SECRET" \
+                -e SALTS="$SALTS" \
+                -e FRONTEND_URL="$FRONTEND_URL" \
+                -e URL="$URL" \
+                --label traefik.enable=true \
+                --label 'traefik.http.routers.api.rule=Host(`'"$DOMAIN"'`) && PathPrefix(`/`)' \
+                --label traefik.http.routers.api.entrypoints=websecure \
+                --label traefik.http.routers.api.tls.certresolver=myresolver \
+                --label traefik.http.services.api.loadbalancer.server.port=3000 \
+                "$IMG"
+            done
+            docker rm -f server-5 || true
+            docker run -d --name server-5 \
+              --cpus="${CPU_LIMIT}" \
+              --restart unless-stopped \
+              --network traefik-net \
+              -e MONGO_URI="$MONGO_URI" \
+              -e EMAIL_ADDRESS="$EMAIL_ADDRESS" \
+              -e EMAIL_PASSWORD="$EMAIL_PASSWORD" \
+              -e JWT_SECRET="$JWT_SECRET" \
+              -e SALTS="$SALTS" \
+              -e FRONTEND_URL="$FRONTEND_URL" \
+              -e URL="$URL" \
+              --label traefik.enable=true \
+              --label 'traefik.http.routers.realtime.rule=Host(`'"$DOMAIN"'`) && (PathPrefix(`/socket.io/`) || PathPrefix(`/user`))' \
+              --label traefik.http.routers.realtime.entrypoints=websecure \
+              --label traefik.http.routers.realtime.tls.certresolver=myresolver \
+              --label traefik.http.services.realtime.loadbalancer.server.port=3000 \
+              "$IMG"
+          }
+          EOF
+          bash -lc "source /tmp/deploy_fn.sh; deploy_with_image \"$IMAGE\""
+
+      - name: Verify and rollback if needed
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          source /tmp/deploy_fn.sh
+          names="server-1 server-2 server-3 server-4 server-5"
+          all_running() {
+            for n in $names; do
+              tries=0
+              until [ $tries -ge 30 ]; do
+                state=$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Running}}{{end}}' "$n" 2>/dev/null || echo false)
+                if [ "$state" = "healthy" ] || [ "$state" = "true" ]; then break; fi
+                tries=$((tries+1))
+                sleep 2
+              done
+              state=$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Running}}{{end}}' "$n" 2>/dev/null || echo false)
+              if [ "$state" != "healthy" ] && [ "$state" != "true" ]; then return 1; fi
+            done
+            return 0
+          }
+          if all_running; then
+            echo "All services are running"
+            exit 0
+          fi
+          if docker image inspect "$ROLLBACK_TAG" >/dev/null 2>&1; then
+            echo "Deploy failed, rolling back to previous image"
+            deploy_with_image "$ROLLBACK_TAG"
+            if all_running; then
+              echo "Rollback succeeded"
+              exit 0
+            else
+              echo "Rollback failed, services not healthy"
+              exit 1
+            fi
+          else
+            echo "Deploy failed and no previous image available for rollback"
+            exit 1
+          fi
+
+      - name: Deploy reverse proxy
+        run: |
+          docker rm -f traefik || true
+          docker run -d --name traefik -p 80:80 -p 443:443 -p 8080:8080 \
+            --network traefik-net \
+            -v "${{ github.workspace }}/traefik.yml:/etc/traefik/traefik.yml:ro" \
+            -v /etc/traefik/letsencrypt:/letsencrypt \
+            -v /var/run/docker.sock:/var/run/docker.sock:ro \
+            -v /etc/traefik/config:/etc/traefik/config \
+            traefik:v3.2
+
+      - name: Prune unused images
+        if: always()
+        run: docker image prune -a -f
