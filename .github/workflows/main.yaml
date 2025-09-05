@@ -78,15 +78,18 @@ jobs:
         env:
           DOMAIN: ${{ secrets.DOMAIN }}
         run: |
-          set -Eeuo pipefail
-          trap 'rollback' ERR
-
+          echo "::group::Initialize"
           IMAGE="$IMAGE_NAME:latest"
           ROLLBACK="$IMAGE_NAME:rollback"
+          echo "Image to deploy: $IMAGE"
+          echo "Rollback image tag: $ROLLBACK"
+          echo "::endgroup::"
 
           rollback() {
+            echo "::group::Rollback"
             set +e
             trap - ERR
+            echo "Rolling back all services to $ROLLBACK"
             docker rm -f server-1 server-2 server-3 server-4 server-5 traefik >/dev/null 2>&1 || true
             run_api server-1 "$ROLLBACK"
             run_api server-2 "$ROLLBACK"
@@ -94,13 +97,18 @@ jobs:
             run_api server-4 "$ROLLBACK"
             run_realtime server-5 "$ROLLBACK"
             run_traefik
+            echo "Rollback completed"
+            echo "::endgroup::"
             exit 1
           }
 
           run_api() {
             NAME="$1"
             IMG="$2"
+            echo "::group::Deploy $NAME"
+            echo "Stopping $NAME if exists"
             docker rm -f "$NAME" >/dev/null 2>&1 || true
+            echo "Starting $NAME with $IMG"
             docker run -d --name "$NAME" \
               --cpus="0.15" \
               --network traefik-net \
@@ -112,17 +120,24 @@ jobs:
               -e FRONTEND_URL="${{ secrets.FRONTEND_URL }}" \
               -e URL="${{ secrets.URL }}" \
               --label "traefik.enable=true" \
-              --label 'traefik.http.routers.api.rule=Host("'$DOMAIN'") && PathPrefix(`/`)' \
+              --label "traefik.http.routers.api.rule=Host("${{ secrets.DOMAIN }}") && PathPrefix(`/`)" \
               --label "traefik.http.routers.api.entrypoints=websecure" \
               --label "traefik.http.routers.api.tls.certresolver=myresolver" \
               --label "traefik.http.services.api.loadbalancer.server.port=3000" \
               "$IMG" >/dev/null
+            echo "Verifying $NAME is running"
+            test "$(docker inspect -f '{{.State.Running}}' "$NAME")" = "true"
+            echo "$NAME is running"
+            echo "::endgroup::"
           }
 
           run_realtime() {
             NAME="$1"
             IMG="$2"
+            echo "::group::Deploy $NAME"
+            echo "Stopping $NAME if exists"
             docker rm -f "$NAME" >/dev/null 2>&1 || true
+            echo "Starting $NAME with $IMG"
             docker run -d --name "$NAME" \
               --cpus="0.15" \
               --network traefik-net \
@@ -134,37 +149,68 @@ jobs:
               -e FRONTEND_URL="${{ secrets.FRONTEND_URL }}" \
               -e URL="${{ secrets.URL }}" \
               --label "traefik.enable=true" \
-              --label 'traefik.http.routers.realtime.rule=Host("'$DOMAIN'") && (PathPrefix(`/socket.io/`) || PathPrefix(`/user`))' \
+              --label "traefik.http.routers.realtime.rule=Host("${{ secrets.DOMAIN }}") && (PathPrefix(`/socket.io/`) || PathPrefix(`/user`))" \
               --label "traefik.http.routers.realtime.entrypoints=websecure" \
               --label "traefik.http.routers.realtime.tls.certresolver=myresolver" \
               --label "traefik.http.services.realtime.loadbalancer.server.port=3000" \
               "$IMG" >/dev/null
+            echo "Verifying $NAME is running"
+            test "$(docker inspect -f '{{.State.Running}}' "$NAME")" = "true"
+            echo "$NAME is running"
+            echo "::endgroup::"
           }
 
           run_traefik() {
+            echo "::group::Deploy traefik"
+            echo "Stopping traefik if exists"
             docker rm -f traefik >/dev/null 2>&1 || true
+            echo "Starting traefik"
             docker run -d --name traefik -p 80:80 -p 443:443 -p 8080:8080 \
               -v "${{ github.workspace }}/traefik.yml:/etc/traefik/traefik.yml:ro" \
               -v /etc/traefik/letsencrypt:/letsencrypt \
               -v /var/run/docker.sock:/var/run/docker.sock:ro \
               -v /etc/traefik/config:/etc/traefik/config \
               traefik:v3.2 >/dev/null
+            echo "Verifying traefik is running"
+            test "$(docker inspect -f '{{.State.Running}}' traefik)" = "true"
+            echo "traefik is running"
+            echo "::endgroup::"
           }
 
+          echo "::group::Prepare rollback image"
           if docker ps -a --format '{{.Names}}' | grep -q '^server-1$'; then
             CURR_ID="$(docker inspect -f '{{.Image}}' server-1)"
+            echo "Tagging current server-1 image as $ROLLBACK"
             docker image tag "$CURR_ID" "$ROLLBACK" || true
           elif docker image inspect "$IMAGE" >/dev/null 2>&1; then
+            echo "Tagging $IMAGE as $ROLLBACK"
             docker image tag "$IMAGE" "$ROLLBACK" || true
+          else
+            echo "No image available to tag as rollback"
           fi
+          echo "::endgroup::"
 
+          echo "::group::Docker login"
           echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin >/dev/null
-          docker network create traefik-net >/dev/null 2>&1 || true
-          docker pull "$IMAGE" >/dev/null 2>&1 || true
+          echo "Logged in to Docker registry"
+          echo "::endgroup::"
 
+          echo "::group::Prepare network"
+          docker network create traefik-net >/dev/null 2>&1 || true
+          echo "Network traefik-net ready"
+          echo "::endgroup::"
+
+          echo "::group::Pull image"
+          docker pull "$IMAGE" >/dev/null 2>&1 || true
+          echo "Pulled $IMAGE"
+          echo "::endgroup::"
+
+          echo "::group::Deploy services"
           run_api server-1 "$IMAGE"
           run_api server-2 "$IMAGE"
           run_api server-3 "$IMAGE"
           run_api server-4 "$IMAGE"
           run_realtime server-5 "$IMAGE"
           run_traefik
+          echo "All services deployed successfully"
+          echo "::endgroup::"
