@@ -123,9 +123,10 @@ jobs:
               -e FRONTEND_URL="${{ secrets.FRONTEND_URL }}" \
               -e URL="${{ secrets.URL }}" \
               --label "traefik.enable=true" \
-              --label 'traefik.http.routers.api.rule=Host("${{ secrets.DOMAIN }}") && PathPrefix(`/`)' \
+              --label 'traefik.http.routers.api.rule=Host(`'"$DOMAIN"'`) && PathPrefix(`/`)' \
               --label "traefik.http.routers.api.entrypoints=websecure" \
               --label "traefik.http.routers.api.tls.certresolver=myresolver" \
+              --label "traefik.http.routers.api.priority=10" \
               --label "traefik.http.services.api.loadbalancer.server.port=3000" \
               "$IMG" >/dev/null
             echo "Verifying $NAME is running"
@@ -152,9 +153,10 @@ jobs:
               -e FRONTEND_URL="${{ secrets.FRONTEND_URL }}" \
               -e URL="${{ secrets.URL }}" \
               --label "traefik.enable=true" \
-              --label 'traefik.http.routers.realtime.rule=Host("${{ secrets.DOMAIN }}") && (PathPrefix(`/socket.io/`) || PathPrefix(`/user`))' \
+              --label 'traefik.http.routers.realtime.rule=Host(`'"$DOMAIN"'`) && (PathPrefix(`/socket.io/`) || PathPrefix(`/user`))' \
               --label "traefik.http.routers.realtime.entrypoints=websecure" \
               --label "traefik.http.routers.realtime.tls.certresolver=myresolver" \
+              --label "traefik.http.routers.realtime.priority=100" \
               --label "traefik.http.services.realtime.loadbalancer.server.port=3000" \
               "$IMG" >/dev/null
             echo "Verifying $NAME is running"
@@ -169,11 +171,14 @@ jobs:
             docker rm -f traefik >/dev/null 2>&1 || true
             echo "Starting traefik"
             docker run -d --name traefik -p 80:80 -p 443:443 -p 8080:8080 \
+              --network traefik-net \
               -v "${{ github.workspace }}/traefik.yml:/etc/traefik/traefik.yml:ro" \
               -v /etc/traefik/letsencrypt:/letsencrypt \
               -v /var/run/docker.sock:/var/run/docker.sock:ro \
               -v /etc/traefik/config:/etc/traefik/config \
-              traefik:v3.2 >/dev/null
+              traefik:v3.2 \
+              --providers.docker=true \
+              --providers.docker.network=traefik-net >/dev/null
             echo "Verifying traefik is running"
             test "$(docker inspect -f '{{.State.Running}}' traefik)" = "true"
             echo "traefik is running"
