@@ -13,30 +13,30 @@ import { UpdatePaymentDto } from "./dto/update-payment.dto";
 
 @Controller("payment")
 export class PaymentController {
-  constructor(private readonly paymentService: PaymentService) {}
+  public constructor(private readonly paymentService: PaymentService) {}
 
   @Post()
-  create(@Body() createPaymentDto: CreatePaymentDto) {
+  public create(@Body() createPaymentDto: CreatePaymentDto): string {
     return this.paymentService.create(createPaymentDto);
   }
 
   @Get()
-  findAll() {
+  public findAll(): string {
     return this.paymentService.findAll();
   }
 
   @Get(":id")
-  findOne(@Param("id") id: string) {
+  public findOne(@Param("id") id: string): string {
     return this.paymentService.findOne(+id);
   }
 
   @Patch(":id")
-  update(@Param("id") id: string, @Body() updatePaymentDto: UpdatePaymentDto) {
+  public update(@Param("id") id: string, @Body() updatePaymentDto: UpdatePaymentDto): string {
     return this.paymentService.update(+id, updatePaymentDto);
   }
 
   @Delete(":id")
-  remove(@Param("id") id: string) {
+  public remove(@Param("id") id: string): string {
     return this.paymentService.remove(+id);
   }
 }
