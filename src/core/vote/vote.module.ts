@@ -6,11 +6,13 @@ import { VoteSchema } from "./entities/vote.entity";
 import { PoolModule } from "../pool/pool.module";
 import { CandidateModule } from "../candidate/candidate.module";
 import { MongoVoteRepository } from "./repositories/vote.mongo.repository";
-import { VoteGateway } from './vote.gateway';
+import { VoteGateway } from "./vote.gateway";
+import { UserModule } from "../user/user.module";
 
 @Module({
   imports: [
     MongooseModule.forFeature([{ name: "Vote", schema: VoteSchema }]),
+    UserModule,
     PoolModule,
     CandidateModule,
   ],

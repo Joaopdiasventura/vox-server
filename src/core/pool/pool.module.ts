@@ -5,10 +5,12 @@ import { MongooseModule } from "@nestjs/mongoose";
 import { PoolSchema } from "./entities/pool.entity";
 import { GroupModule } from "../group/group.module";
 import { MongoPoolRepository } from "./repositories/pool.mongo.repository";
+import { UserModule } from "../user/user.module";
 
 @Module({
   imports: [
     MongooseModule.forFeature([{ name: "Pool", schema: PoolSchema }]),
+    UserModule,
     GroupModule,
   ],
   controllers: [PoolController],

@@ -6,6 +6,8 @@ import {
   Patch,
   Param,
   Delete,
+  UseGuards,
+  Query,
 } from "@nestjs/common";
 import { CandidateService } from "./candidate.service";
 import { CreateCandidateDto } from "./dto/create-candidate.dto";
@@ -13,8 +15,11 @@ import { UpdateCandidateDto } from "./dto/update-candidate.dto";
 import { ParseObjectIdPipe } from "@nestjs/mongoose";
 import { Candidate } from "./entities/candidate.entity";
 import { Message } from "../../shared/interfaces/messages";
+import { AuthGuard } from "../../shared/modules/auth/guards/auth/auth.guard";
+import { FindCandidateDto } from "./dto/find-candidate.dto";
 
 @Controller("candidate")
+@UseGuards(AuthGuard)
 export class CandidateController {
   public constructor(private readonly candidateService: CandidateService) {}
 
@@ -25,17 +30,19 @@ export class CandidateController {
     return this.candidateService.create(createCandidateDto);
   }
 
-  @Get(":id")
-  public findById(@Param("id") id: string): Promise<Candidate> {
+  @Get("findById/:id")
+  public findById(
+    @Param("id", ParseObjectIdPipe) id: string,
+  ): Promise<Candidate> {
     return this.candidateService.findById(id);
   }
 
-  @Get("findManyByGroup/:group/:name")
-  public findManyByGroup(
+  @Get("findMany/:group")
+  public findMany(
     @Param("group", ParseObjectIdPipe) group: string,
-    @Param("name") name: string,
+    @Query() findCandidateDto: FindCandidateDto,
   ): Promise<Candidate[]> {
-    return this.candidateService.findManyByGroup(group, name);
+    return this.candidateService.findMany(group, findCandidateDto);
   }
 
   @Patch(":id")

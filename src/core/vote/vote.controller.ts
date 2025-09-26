@@ -1,11 +1,13 @@
-import { Controller, Get, Post, Body, Param } from "@nestjs/common";
+import { Controller, Get, Post, Body, Param, UseGuards } from "@nestjs/common";
 import { VoteService } from "./vote.service";
 import { CreateVoteDto } from "./dto/create-vote.dto";
 import { ParseObjectIdPipe } from "@nestjs/mongoose";
 import { Message } from "../../shared/interfaces/messages";
 import { Result } from "./interfaces/result";
+import { AuthGuard } from "src/shared/modules/auth/guards/auth/auth.guard";
 
 @Controller("vote")
+@UseGuards(AuthGuard)
 export class VoteController {
   public constructor(private readonly voteService: VoteService) {}
 

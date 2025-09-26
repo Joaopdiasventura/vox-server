@@ -7,7 +7,7 @@ export class Candidate extends Document<string, Candidate, Candidate> {
   @Prop({ required: true })
   public name: string;
 
-  @Prop({ required: true, type: String, ref: "Group" })
+  @Prop({ required: true, index: true, type: String, ref: "Group" })
   public group: Group;
 }
 

@@ -6,6 +6,8 @@ import {
   Patch,
   Param,
   Delete,
+  Query,
+  UseGuards,
 } from "@nestjs/common";
 import { PoolService } from "./pool.service";
 import { CreatePoolDto } from "./dto/create-pool.dto";
@@ -13,8 +15,11 @@ import { UpdatePoolDto } from "./dto/update-pool.dto";
 import { Message } from "../../shared/interfaces/messages";
 import { ParseObjectIdPipe } from "@nestjs/mongoose";
 import { Pool } from "./entities/pool.entity";
+import { FindPoolDto } from "./dto/find-pool.dto";
+import { AuthGuard } from "../../shared/modules/auth/guards/auth/auth.guard";
 
 @Controller("pool")
+@UseGuards(AuthGuard)
 export class PoolController {
   public constructor(private readonly poolService: PoolService) {}
 
@@ -23,16 +28,17 @@ export class PoolController {
     return this.poolService.create(createPoolDto);
   }
 
-  @Get(":id")
+  @Get("findById/:id")
   public findById(@Param("id", ParseObjectIdPipe) id: string): Promise<Pool> {
     return this.poolService.findById(id);
   }
 
-  @Get("findAllByUser/:user")
-  public findAllByUser(
+  @Get("findMany/:user")
+  public findMany(
     @Param("user", ParseObjectIdPipe) user: string,
+    @Query() findPoolDto: FindPoolDto,
   ): Promise<Pool[]> {
-    return this.poolService.findAllByUser(user);
+    return this.poolService.findMany(user, findPoolDto);
   }
 
   @Patch(":id")

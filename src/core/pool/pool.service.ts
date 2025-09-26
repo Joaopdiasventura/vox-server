@@ -10,6 +10,7 @@ import { GroupService } from "../group/group.service";
 import type { IPoolRepository } from "./repositories/pool.repository";
 import { Message } from "../../shared/interfaces/messages";
 import { Pool } from "./entities/pool.entity";
+import { FindPoolDto } from "./dto/find-pool.dto";
 
 @Injectable()
 export class PoolService {
@@ -34,8 +35,8 @@ export class PoolService {
     return pool;
   }
 
-  public findAllByUser(user: string): Promise<Pool[]> {
-    return this.poolRepository.findAllByUser(user);
+  public findMany(user: string, findPoolDto: FindPoolDto): Promise<Pool[]> {
+    return this.poolRepository.findMany(user, findPoolDto);
   }
 
   public async update(
@@ -49,6 +50,11 @@ export class PoolService {
       );
     await this.poolRepository.update(id, { start, end });
     return { message: "Votação atualizada com sucesso" };
+  }
+
+  public async updateVotes(id: string): Promise<void> {
+    const { votes } = await this.findById(id);
+    await this.poolRepository.update(id, { votes: votes + 1 });
   }
 
   public async delete(id: string): Promise<Message> {

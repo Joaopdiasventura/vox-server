@@ -5,10 +5,12 @@ import { MongooseModule } from "@nestjs/mongoose";
 import { CandidateSchema } from "./entities/candidate.entity";
 import { GroupModule } from "../group/group.module";
 import { MongoCandidateRepository } from "./repositories/candidates.mongo.repository";
+import { UserModule } from "../user/user.module";
 
 @Module({
   imports: [
     MongooseModule.forFeature([{ name: "Candidate", schema: CandidateSchema }]),
+    UserModule,
     GroupModule,
   ],
   controllers: [CandidateController],

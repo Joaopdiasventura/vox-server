@@ -5,6 +5,7 @@ import { GroupService } from "../group/group.service";
 import { Message } from "src/shared/interfaces/messages";
 import { Candidate } from "./entities/candidate.entity";
 import type { ICandidateRepository } from "./repositories/candidates.repository";
+import { FindCandidateDto } from "./dto/find-candidate.dto";
 
 @Injectable()
 export class CandidateService {
@@ -28,8 +29,11 @@ export class CandidateService {
     return candidate;
   }
 
-  public findManyByGroup(group: string, name: string): Promise<Candidate[]> {
-    return this.candidateRepository.findManyByGroup(group, name);
+  public findMany(
+    group: string,
+    findCandidateDto: FindCandidateDto,
+  ): Promise<Candidate[]> {
+    return this.candidateRepository.findMany(group, findCandidateDto);
   }
 
   public async update(

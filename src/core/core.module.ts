@@ -5,6 +5,7 @@ import { PoolModule } from "./pool/pool.module";
 import { CandidateModule } from "./candidate/candidate.module";
 import { VoteModule } from "./vote/vote.module";
 import { PaymentModule } from "./payment/payment.module";
+import { OrderModule } from './order/order.module';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { PaymentModule } from "./payment/payment.module";
     PoolModule,
     CandidateModule,
     VoteModule,
+    OrderModule,
     PaymentModule,
   ],
 })

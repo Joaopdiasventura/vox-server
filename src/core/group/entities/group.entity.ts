@@ -7,11 +7,11 @@ export class Group extends Document<string, Group, Group> {
   @Prop({ required: true })
   public name: string;
 
-  @Prop({ required: true, type: String, ref: "User" })
+  @Prop({ required: true, index: true, type: String, ref: "User" })
   public user: User;
 
   @Prop({ required: false, type: String, ref: "Group" })
   public group?: Group;
 }
 
-export const GroupSchema = SchemaFactory.createForClass(Group)
+export const GroupSchema = SchemaFactory.createForClass(Group);

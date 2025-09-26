@@ -5,6 +5,7 @@ import type { IGroupRepository } from "./repositories/group.repository";
 import { UserService } from "../user/user.service";
 import { Group } from "./entities/group.entity";
 import { Message } from "../../shared/interfaces/messages";
+import { FindGroupDto } from "./dto/find-group.dto";
 
 @Injectable()
 export class GroupService {
@@ -23,28 +24,15 @@ export class GroupService {
 
   public async findById(id: string): Promise<Group> {
     const group = await this.groupRepository.findById(id);
-    if (!group) throw new NotFoundException();
+    if (!group) throw new NotFoundException("Grupo não encontrado");
     return group;
   }
 
-  public findManyByUser(user: string, name: string): Promise<Group[]> {
-    return this.groupRepository.findManyByUser(user, name);
-  }
-
-  public findManyByGroup(group: string, name: string): Promise<Group[]> {
-    return this.groupRepository.findManyByGroup(group, name);
-  }
-
-  public findAllWithoutSubGroups(user: string): Promise<Group[]> {
-    return this.groupRepository.findAllWithoutSubGroups(user);
-  }
-
-  public findAllWithoutCandidates(user: string): Promise<Group[]> {
-    return this.groupRepository.findAllWithoutCandidates(user);
-  }
-
-  public findAllWithCandidates(user: string): Promise<Group[]> {
-    return this.groupRepository.findAllWithCandidates(user);
+  public findMany(
+    user: string,
+    findGroupDto: FindGroupDto,
+  ): Promise<Group[]> {
+    return this.groupRepository.findMany(user, findGroupDto);
   }
 
   public async update(

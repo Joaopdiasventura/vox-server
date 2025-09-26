@@ -1,4 +1,4 @@
-import { IsDate, IsOptional } from "class-validator";
+import { IsDate, IsNumber, IsOptional } from "class-validator";
 
 export class UpdatePoolDto {
   @IsOptional()
@@ -8,4 +8,7 @@ export class UpdatePoolDto {
   @IsOptional()
   @IsDate({ message: "Digite uma data de fim válida" })
   public end?: Date;
+
+  @IsNumber({}, { message: "Digite um valor valido" })
+  public votes?: number;
 }

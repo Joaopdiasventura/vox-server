@@ -6,6 +6,8 @@ import {
   Patch,
   Param,
   Delete,
+  Query,
+  UseGuards,
 } from "@nestjs/common";
 import { GroupService } from "./group.service";
 import { CreateGroupDto } from "./dto/create-group.dto";
@@ -13,8 +15,11 @@ import { UpdateGroupDto } from "./dto/update-group.dto";
 import { Message } from "../../shared/interfaces/messages";
 import { Group } from "./entities/group.entity";
 import { ParseObjectIdPipe } from "@nestjs/mongoose";
+import { FindGroupDto } from "./dto/find-group.dto";
+import { AuthGuard } from "../../shared/modules/auth/guards/auth/auth.guard";
 
 @Controller("group")
+@UseGuards(AuthGuard)
 export class GroupController {
   public constructor(private readonly groupService: GroupService) {}
 
@@ -23,41 +28,17 @@ export class GroupController {
     return this.groupService.create(createGroupDto);
   }
 
-  @Get("findManyByUser/:user/:name")
-  public findManyByUser(
-    @Param("user", ParseObjectIdPipe) user: string,
-    @Param("name") name: string,
-  ): Promise<Group[]> {
-    return this.groupService.findManyByUser(user, name);
+  @Get("findById/:id")
+  public findById(@Param("id", ParseObjectIdPipe) id: string): Promise<Group> {
+    return this.groupService.findById(id);
   }
 
-  @Get("findManyByGroup/:group/:name")
-  public findManyByGroup(
-    @Param("group", ParseObjectIdPipe) group: string,
-    @Param("name") name: string,
-  ): Promise<Group[]> {
-    return this.groupService.findManyByGroup(group, name);
-  }
-
-  @Get("findAllWithoutSubGroups/:user")
-  public findAllWithoutSubGroups(
+  @Get("findMany/:user")
+  public findMany(
     @Param("user", ParseObjectIdPipe) user: string,
+    @Query() findGroupDto: FindGroupDto,
   ): Promise<Group[]> {
-    return this.groupService.findAllWithoutSubGroups(user);
-  }
-
-  @Get("findAllWithoutCandidates/:user")
-  public findAllWithoutCandidates(
-    @Param("user", ParseObjectIdPipe) user: string,
-  ): Promise<Group[]> {
-    return this.groupService.findAllWithoutCandidates(user);
-  }
-
-  @Get("findAllWithCandidates/:user")
-  public findAllWithCandidates(
-    @Param("user", ParseObjectIdPipe) user: string,
-  ): Promise<Group[]> {
-    return this.groupService.findAllWithCandidates(user);
+    return this.groupService.findMany(user, findGroupDto);
   }
 
   @Patch(":id")

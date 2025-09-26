@@ -28,6 +28,7 @@ export class VoteService {
       await this.candidateService.findById(createVoteDto.candidate);
 
     const vote = await this.voteRepository.create(createVoteDto);
+    await this.poolService.updateVotes(createVoteDto.pool);
     this.voteGateway.sendVote(vote);
     return { message: "Voto realizado com sucesso" };
   }

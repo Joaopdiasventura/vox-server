@@ -1,6 +1,6 @@
 interface IAppConfig {
   port: number;
-  hash: number;
+  salts: number;
   url: string;
   client: {
     url: string;
@@ -8,16 +8,22 @@ interface IAppConfig {
   jwt: {
     secret: string;
   };
+  vote: {
+    price: number;
+  };
 }
 
 export const AppConfig = (): IAppConfig => ({
   port: process.env.PORT ? parseInt(process.env.PORT) : 3000,
-  hash: process.env.HASH ? parseInt(process.env.HASH) : 10,
+  salts: process.env.SALTS ? parseInt(process.env.SALTS) : 10,
   url: process.env.URL || "http://localhost:3000",
   client: {
     url: process.env.CLIENT_URL || "http://localhost:4200",
   },
   jwt: {
     secret: process.env.JWT_SECRET || "VOX",
+  },
+  vote: {
+    price: process.env.VOTE_PRICE ? parseInt(process.env.VOTE_PRICE) : 1,
   },
 });

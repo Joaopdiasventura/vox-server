@@ -12,6 +12,12 @@ export class User extends Document<string, User, User> {
   @Prop({ required: true })
   public password?: string;
 
+  @Prop({ default: "basic" })
+  public plan: string;
+
+  @Prop({ default: 0 })
+  public votes: number;
+
   @Prop({ default: false })
   public isValid: boolean;
 }

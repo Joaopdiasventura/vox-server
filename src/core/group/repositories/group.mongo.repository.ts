@@ -3,7 +3,8 @@ import { CreateGroupDto } from "../dto/create-group.dto";
 import { UpdateGroupDto } from "../dto/update-group.dto";
 import { Group } from "../entities/group.entity";
 import { IGroupRepository } from "./group.repository";
-import { Model } from "mongoose";
+import { Model, PipelineStage } from "mongoose";
+import { FindGroupDto } from "../dto/find-group.dto";
 
 export class MongoGroupRepository implements IGroupRepository {
   private readonly pageSize = 10;
@@ -20,31 +21,17 @@ export class MongoGroupRepository implements IGroupRepository {
     return this.groupModel.findById(id).exec();
   }
 
-  public findManyByUser(user: string, name: string): Promise<Group[]> {
-    return this.groupModel
-      .find({ user, $gt: name })
-      .sort({ name: 1, _id: 1 })
-      .limit(this.pageSize)
-      .exec();
-  }
+  public async findMany(
+    user: string,
+    { page, limit, orderBy, withSubGroups, withCandidates }: FindGroupDto,
+  ): Promise<Group[]> {
+    const pipeline: PipelineStage[] = [
+      { $match: { user: `${user}` } },
+      { $addFields: { idString: { $toString: "$_id" } } },
+    ];
 
-  public findManyByGroup(group: string, name: string): Promise<Group[]> {
-    return this.groupModel
-      .find({ group, $gt: name })
-      .sort({ name: 1, _id: 1 })
-      .limit(this.pageSize)
-      .exec();
-  }
-
-  public findAllWithoutSubGroups(user: string): Promise<Group[]> {
-    return this.groupModel
-      .aggregate<Group>([
-        {
-          $match: { user },
-        },
-        {
-          $addFields: { idString: { $toString: "$_id" } },
-        },
+    if (withSubGroups != undefined) {
+      pipeline.push(
         {
           $lookup: {
             from: "groups",
@@ -54,54 +41,77 @@ export class MongoGroupRepository implements IGroupRepository {
           },
         },
         {
-          $match: { "subGroups.0": { $exists: false } },
-        },
-        {
-          $project: {
-            subGroups: 0,
-            idString: 0,
+          $match: {
+            "subGroups.0": { $exists: !withSubGroups },
           },
         },
+        { $project: { subGroups: 0 } },
+      );
+    }
+
+    if (withCandidates != undefined)
+      pipeline.push(
         {
           $lookup: {
-            from: "groups",
-            let: { parentId: "$group" },
-            pipeline: [
-              { $addFields: { idString: { $toString: "$_id" } } },
-              { $match: { $expr: { $eq: ["$idString", "$$parentId"] } } },
-              { $project: { name: 1 } },
-            ],
-            as: "parentGroup",
+            from: "candidates",
+            localField: "idString",
+            foreignField: "group",
+            as: "candidates",
           },
         },
         {
-          $addFields: {
-            isSubgroup: { $cond: [{ $ifNull: ["$group", false] }, 1, 0] },
-            group: {
-              $cond: {
-                if: { $ifNull: ["$group", false] },
-                then: { $arrayElemAt: ["$parentGroup.name", 0] },
-                else: "$group",
-              },
-            },
+          $match: {
+            "candidates.0": { $exists: !!withCandidates },
           },
         },
-        {
-          $sort: { group: 1, isSubgroup: 1, name: 1 },
-        },
-        {
-          $project: { parentGroup: 0, isSubgroup: 0 },
-        },
-      ])
-      .exec();
-  }
+        { $project: { candidates: 0 } },
+      );
 
-  public findAllWithoutCandidates(user: string): Promise<Group[]> {
-    return this.findAllBasedOnCandidates(user, true);
-  }
+    pipeline.push({
+      $lookup: {
+        from: "groups",
+        let: { parentId: "$group" },
+        pipeline: [
+          { $addFields: { idString: { $toString: "$_id" } } },
+          { $match: { $expr: { $eq: ["$idString", "$$parentId"] } } },
+          { $project: { name: 1 } },
+        ],
+        as: "parentGroup",
+      },
+    });
 
-  public findAllWithCandidates(user: string): Promise<Group[]> {
-    return this.findAllBasedOnCandidates(user, false);
+    pipeline.push({
+      $addFields: {
+        isSubgroup: { $cond: [{ $ifNull: ["$group", false] }, 1, 0] },
+        group: {
+          $cond: {
+            if: { $ifNull: ["$group", false] },
+            then: { $arrayElemAt: ["$parentGroup.name", 0] },
+            else: "$group",
+          },
+        },
+      },
+    });
+
+    if (orderBy) {
+      const [field, direction] = orderBy.split(":");
+      if (field && direction)
+        pipeline.push({
+          $sort: {
+            [field]: direction == "desc" ? -1 : 1,
+            _id: 1,
+          },
+        });
+    } else pipeline.push({ $sort: { group: 1, isSubgroup: 1, name: 1 } });
+
+    if (limit && limit > 0) {
+      pipeline.push({ $limit: limit });
+      if (page && page >= 0) pipeline.push({ $skip: page * limit });
+    }
+
+    pipeline.push({ $project: { parentGroup: 0, isSubgroup: 0, idString: 0 } });
+
+    return this.groupModel.aggregate<Group>(pipeline).exec();
   }
 
   public async update(
@@ -113,57 +123,5 @@ export class MongoGroupRepository implements IGroupRepository {
 
   public async delete(id: string): Promise<void> {
     await this.groupModel.findByIdAndDelete(id).exec();
-  }
-
-  private findAllBasedOnCandidates(
-    user: string,
-    without: boolean,
-  ): Promise<Group[]> {
-    return this.groupModel
-      .aggregate<Group>([
-        { $match: { user } },
-        { $addFields: { idString: { $toString: "$_id" } } },
-        {
-          $lookup: {
-            from: "candidates",
-            localField: "idString",
-            foreignField: "group",
-            as: "candidates",
-          },
-        },
-        { $match: { "candidates.0": { $exists: without } } },
-        { $project: { candidates: 0, idString: 0 } },
-        {
-          $lookup: {
-            from: "groups",
-            let: { parentId: "$group" },
-            pipeline: [
-              { $addFields: { idString: { $toString: "$_id" } } },
-              { $match: { $expr: { $eq: ["$idString", "$$parentId"] } } },
-              { $project: { name: 1 } },
-            ],
-            as: "parentGroup",
-          },
-        },
-        {
-          $addFields: {
-            isSubgroup: { $cond: [{ $ifNull: ["$group", false] }, 1, 0] },
-            group: {
-              $cond: {
-                if: { $ifNull: ["$group", false] },
-                then: { $arrayElemAt: ["$parentGroup.name", 0] },
-                else: "$group",
-              },
-            },
-          },
-        },
-        {
-          $sort: { group: 1, isSubgroup: 1, name: 1 },
-        },
-        {
-          $project: { parentGroup: 0, isSubgroup: 0 },
-        },
-      ])
-      .exec();
   }
 }

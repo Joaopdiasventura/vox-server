@@ -3,40 +3,44 @@ import {
   Get,
   Post,
   Body,
-  Patch,
   Param,
-  Delete,
+  UseGuards,
+  Query,
 } from "@nestjs/common";
 import { PaymentService } from "./payment.service";
 import { CreatePaymentDto } from "./dto/create-payment.dto";
-import { UpdatePaymentDto } from "./dto/update-payment.dto";
+import { AuthGuard } from "../../shared/modules/auth/guards/auth/auth.guard";
+import { Message } from "../../shared/interfaces/messages";
+import { SDKPaymentResponse } from "./providers/interfaces/responses";
+import type {
+  PixPaymentPayload,
+  CardPaymentPayload,
+} from "./providers/interfaces/payloads";
+import { ParseObjectIdPipe } from "@nestjs/mongoose";
 
 @Controller("payment")
+@UseGuards(AuthGuard)
 export class PaymentController {
   public constructor(private readonly paymentService: PaymentService) {}
 
   @Post()
-  public create(@Body() createPaymentDto: CreatePaymentDto): string {
+  public create(@Body() createPaymentDto: CreatePaymentDto): Promise<Message> {
     return this.paymentService.create(createPaymentDto);
   }
 
-  @Get()
-  public findAll(): string {
-    return this.paymentService.findAll();
+  @Get("pix/:order")
+  public getPixPayment(
+    @Param("order", ParseObjectIdPipe) order: string,
+    @Query() payload: PixPaymentPayload,
+  ): Promise<SDKPaymentResponse> {
+    return this.paymentService.getPixPayment(order, payload);
   }
 
-  @Get(":id")
-  public findOne(@Param("id") id: string): string {
-    return this.paymentService.findOne(+id);
-  }
-
-  @Patch(":id")
-  public update(@Param("id") id: string, @Body() updatePaymentDto: UpdatePaymentDto): string {
-    return this.paymentService.update(+id, updatePaymentDto);
-  }
-
-  @Delete(":id")
-  public remove(@Param("id") id: string): string {
-    return this.paymentService.remove(+id);
+  @Get("card/:order")
+  public getCardPayment(
+    @Param("order", ParseObjectIdPipe) order: string,
+    @Query() payload: CardPaymentPayload,
+  ): Promise<SDKPaymentResponse> {
+    return this.paymentService.getCardPayment(order, payload);
   }
 }
