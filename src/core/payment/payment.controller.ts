@@ -11,7 +11,6 @@ import type {
 import { ParseObjectIdPipe } from "@nestjs/mongoose";
 
 @Controller("payment")
-@UseGuards(AuthGuard)
 export class PaymentController {
   public constructor(private readonly paymentService: PaymentService) {}
 
@@ -21,6 +20,7 @@ export class PaymentController {
   }
 
   @Post("pix/:order")
+@UseGuards(AuthGuard)
   public getPixPayment(
     @Param("order", ParseObjectIdPipe) order: string,
     @Body() payload: PixPaymentPayload,
@@ -29,6 +29,7 @@ export class PaymentController {
   }
 
   @Post("card/:order")
+@UseGuards(AuthGuard)
   public getCardPayment(
     @Param("order", ParseObjectIdPipe) order: string,
     @Body() payload: CardPaymentPayload,

@@ -9,8 +9,8 @@ export class MongoPaymentRepository implements PaymentRepository {
     @InjectModel("Payment") private readonly paymentModel: Model<Payment>,
   ) {}
 
-  public create({ data }: CreatePaymentDto): Promise<Payment> {
-    return this.paymentModel.insertOne(data);
+  public create(createPaymentDto: CreatePaymentDto): Promise<Payment> {
+    return this.paymentModel.insertOne(createPaymentDto);
   }
 
   public findByOrder(order: string): Promise<Payment | null> {

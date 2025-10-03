@@ -31,15 +31,17 @@ export class PaymentService {
 
   public async create(createPaymentDto: CreatePaymentDto): Promise<Message> {
     const paymentStatus = await this.paymentGatewayProvider.getStatus(
-      createPaymentDto.data.id,
+      createPaymentDto.data!.id,
     );
     if (!paymentStatus.approved)
       throw new UnauthorizedException("Pagamento não aprovado");
     const { user, plan, votes } = await this.orderService.findById(
       paymentStatus.order,
     );
-    await this.paymentRepository.create(createPaymentDto);
-    await this.userService.update(user as unknown as string, { plan, votes });
+    console.log(paymentStatus);
+    
+    await this.paymentRepository.create(paymentStatus);
+    await this.userService.update(user._id, { plan, votes });
     this.paymentGateway.orderPaid(paymentStatus.order);
     return { message: "Pagamento realizado com sucesso" };
   }
