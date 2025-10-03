@@ -53,8 +53,8 @@ export class MongoPoolRepository implements IPoolRepository {
     } else pipeline.push({ $sort: { group: 1, isSubgroup: 1, name: 1 } });
 
     if (limit && limit > 0) {
-      pipeline.push({ $limit: limit });
       if (page && page >= 0) pipeline.push({ $skip: page * limit });
+      pipeline.push({ $limit: limit });
     }
 
     pipeline.push({ $project: { groupObjId: 0 } });

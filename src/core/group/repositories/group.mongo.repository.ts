@@ -105,8 +105,8 @@ export class MongoGroupRepository implements IGroupRepository {
     } else pipeline.push({ $sort: { group: 1, isSubgroup: 1, name: 1 } });
 
     if (limit && limit > 0) {
-      pipeline.push({ $limit: limit });
       if (page && page >= 0) pipeline.push({ $skip: page * limit });
+      pipeline.push({ $limit: limit });
     }
 
     pipeline.push({ $project: { parentGroup: 0, isSubgroup: 0, idString: 0 } });
