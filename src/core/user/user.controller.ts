@@ -49,6 +49,12 @@ export class UserController {
     return this.userService.update(id, updateUserDto);
   }
 
+  @Patch("validateEmail/:token")
+  @UseGuards(AuthGuard)
+  public validateEmail(@Param("token") token: string): Promise<Message> {
+    return this.userService.validateEmail(token);
+  }
+
   @Delete(":id")
   @UseGuards(AuthGuard)
   public delete(@Param("id", ParseObjectIdPipe) id: string): Promise<Message> {

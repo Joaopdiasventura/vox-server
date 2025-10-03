@@ -3,7 +3,7 @@ import type { Plan } from "../types/plan";
 import { PlanValues } from "../enums/plan";
 
 export class CreateOrderDto {
-  @IsEnum( PlanValues, { message: "Selecione um plano válido" })
+  @IsEnum(PlanValues, { message: "Selecione um plano válido" })
   public plan: Plan;
 
   @IsNumber({}, { message: "Selecione uma quantidade de votos válida" })

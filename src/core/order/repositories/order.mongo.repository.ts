@@ -16,7 +16,10 @@ export class MongoOrderRepository implements OrderRepository {
   }
 
   public findById(id: string): Promise<Order | null> {
-    return this.orderModel.findById(id).exec();
+    return this.orderModel
+      .findById(id)
+      .populate({ path: "user", select: "email name" })
+      .exec();
   }
 
   public findMany(

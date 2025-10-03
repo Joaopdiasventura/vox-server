@@ -8,7 +8,8 @@ import { OrderModule } from "../order/order.module";
 import { MongooseModule } from "@nestjs/mongoose";
 import { PaymentSchema } from "./entities/payment.entity";
 import { MongoPaymentRepository } from "./repositories/payment.mongo.repository";
-import { PaymentGateway } from './payment.gateway';
+import { PaymentGateway } from "./payment.gateway";
+import { CacheModule } from "@nestjs/cache-manager";
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { PaymentGateway } from './payment.gateway';
     MongooseModule.forFeature([{ name: "Payment", schema: PaymentSchema }]),
     UserModule,
     OrderModule,
+    CacheModule.register(),
   ],
   controllers: [PaymentController],
   providers: [

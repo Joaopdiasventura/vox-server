@@ -1,7 +1,4 @@
-import {
-  PixPaymentPayload,
-  CardPaymentPayload,
-} from "./interfaces/payloads";
+import { PixPaymentPayload, CardPaymentPayload } from "./interfaces/payloads";
 import { SDKPaymentResponse } from "./interfaces/responses";
 
 export interface PaymentStatus {

@@ -1,7 +1,7 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { VoteGateway } from './vote.gateway';
+import { Test, TestingModule } from "@nestjs/testing";
+import { VoteGateway } from "./vote.gateway";
 
-describe('VoteGateway', () => {
+describe("VoteGateway", () => {
   let gateway: VoteGateway;
 
   beforeEach(async () => {
@@ -12,7 +12,7 @@ describe('VoteGateway', () => {
     gateway = module.get<VoteGateway>(VoteGateway);
   });
 
-  it('should be defined', () => {
+  it("should be defined", () => {
     expect(gateway).toBeDefined();
   });
 });

@@ -1,12 +1,4 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Param,
-  UseGuards,
-  Query,
-} from "@nestjs/common";
+import { Controller, Post, Body, Param, UseGuards } from "@nestjs/common";
 import { PaymentService } from "./payment.service";
 import { CreatePaymentDto } from "./dto/create-payment.dto";
 import { AuthGuard } from "../../shared/modules/auth/guards/auth/auth.guard";
@@ -28,18 +20,18 @@ export class PaymentController {
     return this.paymentService.create(createPaymentDto);
   }
 
-  @Get("pix/:order")
+  @Post("pix/:order")
   public getPixPayment(
     @Param("order", ParseObjectIdPipe) order: string,
-    @Query() payload: PixPaymentPayload,
+    @Body() payload: PixPaymentPayload,
   ): Promise<SDKPaymentResponse> {
     return this.paymentService.getPixPayment(order, payload);
   }
 
-  @Get("card/:order")
+  @Post("card/:order")
   public getCardPayment(
     @Param("order", ParseObjectIdPipe) order: string,
-    @Query() payload: CardPaymentPayload,
+    @Body() payload: CardPaymentPayload,
   ): Promise<SDKPaymentResponse> {
     return this.paymentService.getCardPayment(order, payload);
   }

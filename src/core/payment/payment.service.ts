@@ -52,7 +52,21 @@ export class PaymentService {
       throw new BadRequestException("Pagamento já realizado para este pedido");
 
     const order = await this.orderService.findById(orderId);
-    payload.transaction_amount = order.value / 100;
+    const amount = Math.round(order.value) / 100;
+
+    payload.transaction_amount = amount;
+    payload.description =
+      payload.description || `Pagamento do pedido ${orderId}`;
+    payload.payer = payload.payer || { email: "" };
+    payload.payer.email = order.user?.email || payload.payer.email;
+    payload.payer.first_name = order.user.name || payload.payer.first_name;
+    payload.payer.last_name = order.user.email || payload.payer.last_name;
+    payload.payer.identification = payload.payer.identification || {
+      type: "CPF",
+      number: "12345678909",
+    };
+
+    payload.transaction_amount = order.value;
     payload.payer = { email: "" };
 
     if (order.user) payload.payer.email = order.user.email;
@@ -69,7 +83,7 @@ export class PaymentService {
     if (!payload.token) throw new BadRequestException("token ausente");
     const order = await this.orderService.findById(orderId);
 
-    payload.transaction_amount = order.value / 100;
+    payload.transaction_amount = order.value;
     if (order.user) payload.payer = { email: order.user.email };
     if (!payload.installments) payload.installments = 1;
     else payload.installments = parseInt("" + payload.installments);

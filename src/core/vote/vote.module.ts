@@ -8,6 +8,7 @@ import { CandidateModule } from "../candidate/candidate.module";
 import { MongoVoteRepository } from "./repositories/vote.mongo.repository";
 import { VoteGateway } from "./vote.gateway";
 import { UserModule } from "../user/user.module";
+import { CacheModule } from "@nestjs/cache-manager";
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { UserModule } from "../user/user.module";
     UserModule,
     PoolModule,
     CandidateModule,
+    CacheModule.register(),
   ],
   controllers: [VoteController],
   providers: [

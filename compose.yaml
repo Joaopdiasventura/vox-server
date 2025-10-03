@@ -13,6 +13,12 @@ services:
       - vox-data:/data/db
     ports:
       - "27017:27017"
+  cache:
+    image: redis:7.2-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - vox-data:/data
 
 volumes:
   vox-data:

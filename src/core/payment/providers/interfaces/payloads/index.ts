@@ -32,6 +32,4 @@ export interface CardPaymentPayload extends BasePaymentPayload {
   issuer_id?: number;
 }
 
-export type MercadoPagoPaymentPayload =
-  | PixPaymentPayload
-  | CardPaymentPayload
+export type MercadoPagoPaymentPayload = PixPaymentPayload | CardPaymentPayload;

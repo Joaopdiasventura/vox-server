@@ -28,10 +28,7 @@ export class GroupService {
     return group;
   }
 
-  public findMany(
-    user: string,
-    findGroupDto: FindGroupDto,
-  ): Promise<Group[]> {
+  public findMany(user: string, findGroupDto: FindGroupDto): Promise<Group[]> {
     return this.groupRepository.findMany(user, findGroupDto);
   }
 

@@ -1,8 +1,11 @@
+import { Inject } from "@nestjs/common";
 import {
   SubscribeMessage,
   WebSocketGateway,
   WebSocketServer,
 } from "@nestjs/websockets";
+import { CACHE_MANAGER } from "@nestjs/cache-manager";
+import type { Cache } from "cache-manager";
 import { Server, Socket } from "socket.io";
 import { Vote } from "./entities/vote.entity";
 
@@ -11,7 +14,42 @@ export class VoteGateway {
   @WebSocketServer()
   private server: Server;
 
-  private readonly clientsMap = new Map<string, string>();
+  public constructor(@Inject(CACHE_MANAGER) private readonly cache: Cache) {}
+
+  private sidKey(id: string): string {
+    return `vote:sid:${id}`;
+  }
+
+  private ridKey(id: string): string {
+    return `vote:rid:${id}`;
+  }
+
+  private async setPair(
+    simpleId: string,
+    realId: string,
+    ttlMs?: number,
+  ): Promise<void> {
+    await this.cache.set(this.sidKey(simpleId), realId, ttlMs);
+    await this.cache.set(this.ridKey(realId), simpleId, ttlMs);
+  }
+
+  private async getRealId(simpleId: string): Promise<string | null> {
+    return (await this.cache.get<string>(this.sidKey(simpleId))) || null;
+  }
+
+  private async getSimpleId(realId: string): Promise<string | null> {
+    return (await this.cache.get<string>(this.ridKey(realId))) || null;
+  }
+
+  private async hasSimpleId(simpleId: string): Promise<boolean> {
+    return (await this.getRealId(simpleId)) != null;
+  }
+
+  private async deleteByRealId(realId: string): Promise<void> {
+    const simpleId = await this.getSimpleId(realId);
+    await this.cache.del(this.ridKey(realId));
+    if (simpleId) await this.cache.del(this.sidKey(simpleId));
+  }
 
   private generateSimpleId(): string {
     const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -23,17 +61,22 @@ export class VoteGateway {
     return result;
   }
 
-  public handleConnection(client: Socket): void {
-    const realId = client.id;
+  private async generateUniqueSimpleId(): Promise<string> {
     let simpleId = this.generateSimpleId();
-    while (this.clientsMap.get(simpleId)) simpleId = this.generateSimpleId();
-    this.clientsMap.set(simpleId, realId);
+    while (await this.hasSimpleId(simpleId)) simpleId = this.generateSimpleId();
+    return simpleId;
+  }
+
+  public async handleConnection(client: Socket): Promise<void> {
+    const realId = client.id;
+    const simpleId = await this.generateUniqueSimpleId();
+    await this.setPair(simpleId, realId);
     client.emit("new-id", simpleId);
   }
 
   @SubscribeMessage("allow-vote")
-  public allowVote(client: Socket, urnId: string): void {
-    const id = this.clientsMap.get(urnId);
+  public async allowVote(client: Socket, urnId: string): Promise<void> {
+    const id = await this.getRealId(urnId);
     if (id) client.to(id).emit("vote-allowed");
   }
 
@@ -48,11 +91,8 @@ export class VoteGateway {
     });
   }
 
-  public handleDisconnect(client: Socket): void {
+  public async handleDisconnect(client: Socket): Promise<void> {
     const realId = client.id;
-    const simpleId = [...this.clientsMap].find(
-      ([, value]) => value == realId,
-    )?.[0];
-    if (simpleId) this.clientsMap.delete(simpleId);
+    await this.deleteByRealId(realId);
   }
 }

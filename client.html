@@ -1,0 +1,285 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Simulador de Pagamentos (Teste)</title>
+    <script src="https://sdk.mercadopago.com/js/v2"></script>
+    <style>
+      body {
+        font-family:
+          system-ui,
+          -apple-system,
+          Segoe UI,
+          Roboto,
+          Arial,
+          sans-serif;
+        max-width: 520px;
+        margin: 24px auto;
+        padding: 0 16px;
+      }
+      .hint {
+        font-size: 12px;
+        margin: 8px 0 16px;
+      }
+      .row {
+        margin-bottom: 12px;
+      }
+      #cardNumber,
+      #expirationDate,
+      #securityCode {
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 12px;
+      }
+      button {
+        width: 100%;
+        padding: 12px 16px;
+        border: 0;
+        border-radius: 8px;
+        background: #009ee3;
+        color: #fff;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      pre {
+        background: #0b1020;
+        color: #cde3ff;
+        padding: 12px;
+        border-radius: 8px;
+        overflow: auto;
+      }
+      label {
+        display: block;
+        font-size: 13px;
+        margin-bottom: 6px;
+        color: #333;
+      }
+      input {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Simulador de Pagamentos (ambiente de teste)</h1>
+
+    <div class="hint">
+      Use chave pública de teste e dados de teste. Exemplo: número do cartão
+      <b>5031433215406351</b>, vencimento <b>11/30</b>, CVV <b>123</b>, nome
+      <b>APRO</b>, CPF <b>12345678909</b>.
+    </div>
+
+    <div class="row">
+      <label for="apiUrl">URL da API</label>
+      <input id="apiUrl" value="http://localhost:3000" />
+    </div>
+
+    <div class="row">
+      <label for="auth">Token (header Authorization)</label>
+      <input id="auth" placeholder="Cole o token JWT aqui" />
+    </div>
+
+    <div class="row">
+      <label for="orderId">ID do Pedido</label>
+      <input id="orderId" placeholder="Ex.: 66f..." />
+    </div>
+
+    <h2>Cartão de Crédito</h2>
+    <form id="pay">
+      <div class="row">
+        <label for="cardholderName">Nome impresso no cartão</label>
+        <input id="cardholderName" value="APRO" required />
+      </div>
+
+      <div class="row">
+        <label for="docType">Tipo de documento</label>
+        <input id="docType" value="CPF" required />
+      </div>
+
+      <div class="row">
+        <label for="docNumber">Documento</label>
+        <input id="docNumber" value="12345678909" required />
+      </div>
+
+      <div class="row">
+        <label>Número do cartão</label>
+        <div id="cardNumber"></div>
+      </div>
+
+      <div class="row">
+        <label>Validade (MM/AA)</label>
+        <div id="expirationDate"></div>
+      </div>
+
+      <div class="row">
+        <label>Código de segurança</label>
+        <div id="securityCode"></div>
+      </div>
+
+      <button type="submit">Pagar com Cartão (teste)</button>
+    </form>
+
+    <div class="row">
+      <button id="payPix">Pagar com PIX (teste)</button>
+    </div>
+
+    <div class="row">
+      <label for="paymentId">ID do Pagamento (retornado pelo SDK)</label>
+      <input id="paymentId" placeholder="Preenchido após o pagamento" />
+    </div>
+
+    <div class="row">
+      <button id="confirmPayment">Confirmar pagamento (simular webhook)</button>
+    </div>
+
+    <h3>Resposta</h3>
+    <pre id="out"></pre>
+
+    <script>
+      const mp = new MercadoPago("TEST-fba2e39a-bcac-4925-bca8-9c7bce374394Y", {
+        locale: "pt-BR",
+      });
+      const cardNumberElement = mp.fields
+        .create("cardNumber")
+        .mount("cardNumber");
+      const expirationDateElement = mp.fields
+        .create("expirationDate")
+        .mount("expirationDate");
+      const securityCodeElement = mp.fields
+        .create("securityCode")
+        .mount("securityCode");
+      const form = document.getElementById("pay");
+      const out = document.getElementById("out");
+      const payPixBtn = document.getElementById("payPix");
+      const confirmPaymentBtn = document.getElementById("confirmPayment");
+
+      let currentBin = null;
+      cardNumberElement.on("binChange", async ({ bin }) => {
+        currentBin = bin;
+      });
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        out.textContent = "";
+        const amount = "40";
+        const bin = currentBin || "503143";
+        const installmentsInfo = await mp.getInstallments({
+          amount,
+          bin,
+          paymentTypeId: "credit_card",
+        });
+        console.log(installmentsInfo);
+
+        const cardholderName = document.getElementById("cardholderName").value;
+        const identificationType = document.getElementById("docType").value;
+        const identificationNumber = document.getElementById("docNumber").value;
+
+        const result = await mp.fields.createCardToken({
+          cardholderName,
+          identificationType,
+          identificationNumber,
+          cardNumberElement,
+          expirationDateElement,
+          securityCodeElement,
+        });
+
+        const pm = installmentsInfo?.[0];
+        const apiUrl = document.getElementById("apiUrl").value.trim();
+        const token = document.getElementById("auth").value.trim();
+        const orderId = document.getElementById("orderId").value.trim();
+
+        if (!apiUrl || !orderId || !token) {
+          out.textContent =
+            "Preencha URL da API, Token e ID do Pedido para continuar.";
+          return;
+        }
+
+        const body = {
+          token: result.id,
+          payment_method_id: pm?.payment_method_id || "master",
+          installments: 1,
+          issuer_id: pm?.issuer?.id,
+        };
+
+        try {
+          const res = await fetch(`${apiUrl}/payment/card/${orderId}`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: token,
+            },
+            body: JSON.stringify(body),
+          });
+          const data = await res.json();
+          out.textContent = JSON.stringify(data, null, 2);
+
+          const paymentIdInput = document.getElementById("paymentId");
+          if (data?.id) paymentIdInput.value = data.id;
+        } catch (err) {
+          out.textContent = `Erro ao pagar com cartão: ${err}`;
+        }
+      });
+
+      payPixBtn.addEventListener("click", async () => {
+        out.textContent = "";
+        const apiUrl = document.getElementById("apiUrl").value.trim();
+        const token = document.getElementById("auth").value.trim();
+        const orderId = document.getElementById("orderId").value.trim();
+
+        if (!apiUrl || !orderId || !token) {
+          out.textContent =
+            "Preencha URL da API, Token e ID do Pedido para continuar.";
+          return;
+        }
+
+        try {
+          const res = await fetch(`${apiUrl}/payment/pix/${orderId}`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: token,
+            },
+            body: JSON.stringify({}),
+          });
+          const data = await res.json();
+          out.textContent = JSON.stringify(data, null, 2);
+
+          const paymentIdInput = document.getElementById("paymentId");
+          if (data?.id) paymentIdInput.value = data.id;
+        } catch (err) {
+          out.textContent = `Erro ao pagar com PIX: ${err}`;
+        }
+      });
+
+      confirmPaymentBtn.addEventListener("click", async () => {
+        out.textContent = "";
+        const apiUrl = document.getElementById("apiUrl").value.trim();
+        const token = document.getElementById("auth").value.trim();
+        const paymentId = document.getElementById("paymentId").value.trim();
+
+        if (!apiUrl || !paymentId || !token) {
+          out.textContent =
+            "Preencha URL da API, Token e ID do Pagamento para continuar.";
+          return;
+        }
+
+        try {
+          const res = await fetch(`${apiUrl}/payment`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: token,
+            },
+            body: JSON.stringify({ data: { id: paymentId } }),
+          });
+          const data = await res.json();
+          out.textContent = JSON.stringify(data, null, 2);
+        } catch (err) {
+          out.textContent = `Erro ao confirmar pagamento: ${err}`;
+        }
+      });
+    </script>
+  </body>
+</html>

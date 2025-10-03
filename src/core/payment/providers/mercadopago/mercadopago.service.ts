@@ -16,7 +16,7 @@ export class MercadopagoService implements PaymentGatewayProvider {
 
   public constructor(private readonly configService: ConfigService) {
     this.client = new MercadoPagoConfig({
-      accessToken: this.configService.get<string>("mp.accessToken")!,
+      accessToken: this.configService.get<string>("mercadopago.accessToken")!,
     });
     this.payment = new Payment(this.client);
   }
@@ -49,7 +49,7 @@ export class MercadopagoService implements PaymentGatewayProvider {
     try {
       return await this.payment.create({
         body: { ...payload, external_reference: order },
-        requestOptions: { idempotencyKey: `${order}:card` },
+        requestOptions: { idempotencyKey: order },
       });
     } catch (e) {
       Logger.error(e, "MercadoPagoService");

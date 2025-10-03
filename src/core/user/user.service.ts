@@ -7,6 +7,7 @@ import { User } from "./entities/user.entity";
 import { Message } from "../../shared/interfaces/messages";
 import { AuthMessage } from "../../shared/interfaces/messages/auth";
 import { AuthService } from "../../shared/modules/auth/auth.service";
+import { EmailService } from "../../shared/modules/email/email.service";
 import type { IUserRepository } from "./repositories/user.repository";
 
 @Injectable()
@@ -15,6 +16,7 @@ export class UserService {
     @Inject("IUserRepository") private readonly userRepository: IUserRepository,
     private readonly userGateway: UserGateway,
     private readonly authService: AuthService,
+    private readonly emailService: EmailService,
   ) {}
 
   public async create(createUserDto: CreateUserDto): Promise<AuthMessage> {
@@ -25,6 +27,13 @@ export class UserService {
 
     const result = await this.userRepository.create(createUserDto);
     const token = await this.authService.generateToken(result.id);
+
+    await this.emailService.sendMail({
+      to: result.email,
+      subject: "VALIDAÇÃO DE CONTA",
+      html: this.emailService.createValidationButton(token),
+    });
+
     const user = result.toObject();
     delete user.password;
 
