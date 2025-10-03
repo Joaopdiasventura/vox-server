@@ -74,38 +74,18 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Deploy with rollback
+      - name: Deploy
         env:
           DOMAIN: ${{ secrets.DOMAIN }}
         run: |
           set -Eeuo pipefail
-          trap 'rollback' ERR
 
           echo "::group::Initialize"
           IMAGE="$IMAGE_NAME:latest"
-          ROLLBACK="$IMAGE_NAME:rollback"
           echo "Image to deploy: $IMAGE"
-          echo "Rollback image tag: $ROLLBACK"
           echo "::endgroup::"
 
-          rollback() {
-            echo "::group::Rollback"
-            set +e
-            trap - ERR
-            echo "Rolling back all services to $ROLLBACK"
-            docker rm -f server-1 server-2 server-3 server-4 server-5 traefik >/dev/null 2>&1 || true
-            run_api server-1 "$ROLLBACK"
-            run_api server-2 "$ROLLBACK"
-            run_api server-3 "$ROLLBACK"
-            run_api server-4 "$ROLLBACK"
-            run_realtime server-5 "$ROLLBACK"
-            run_traefik
-            echo "Rollback completed"
-            echo "::endgroup::"
-            exit 1
-          }
-
-          run_api() {
+          run_server() {
             NAME="$1"
             IMG="$2"
             echo "::group::Deploy $NAME"
@@ -127,41 +107,14 @@ jobs:
               --label "traefik.http.routers.api.entrypoints=websecure" \
               --label "traefik.http.routers.api.tls.certresolver=myresolver" \
               --label "traefik.http.routers.api.priority=10" \
+              --label "traefik.http.routers.api.service=api" \
               --label "traefik.http.services.api.loadbalancer.server.port=3000" \
+              --label "traefik.http.services.api.loadbalancer.sticky=true" \
+              --label "traefik.http.services.api.loadbalancer.sticky.cookie.name=vox_session" \
+              --label "traefik.http.services.api.loadbalancer.sticky.cookie.secure=true" \
+              --label "traefik.http.services.api.loadbalancer.sticky.cookie.httpOnly=true" \
+              --label "traefik.http.services.api.loadbalancer.sticky.cookie.sameSite=None" \
               "$IMG" >/dev/null
-            echo "Verifying $NAME is running"
-            test "$(docker inspect -f '{{.State.Running}}' "$NAME")" = "true"
-            echo "$NAME is running"
-            echo "::endgroup::"
-          }
-
-          run_realtime() {
-            NAME="$1"
-            IMG="$2"
-            echo "::group::Deploy $NAME"
-            echo "Stopping $NAME if exists"
-            docker rm -f "$NAME" >/dev/null 2>&1 || true
-            echo "Starting $NAME with $IMG"
-            docker run -d --name "$NAME" \
-              --cpus="0.15" \
-              --network traefik-net \
-              -e MONGO_URI="${{ secrets.MONGO_URI }}" \
-              -e EMAIL_ADDRESS="${{ secrets.EMAIL_ADDRESS }}" \
-              -e EMAIL_PASSWORD="${{ secrets.EMAIL_PASSWORD }}" \
-              -e JWT_SECRET="${{ secrets.JWT_SECRET }}" \
-              -e SALTS="${{ secrets.SALTS }}" \
-              -e FRONTEND_URL="${{ secrets.FRONTEND_URL }}" \
-              -e URL="${{ secrets.URL }}" \
-              --label "traefik.enable=true" \
-              --label 'traefik.http.routers.realtime.rule=Host(`'"$DOMAIN"'`) && (PathPrefix(`/socket.io/`) || PathPrefix(`/user`))' \
-              --label "traefik.http.routers.realtime.entrypoints=websecure" \
-              --label "traefik.http.routers.realtime.tls.certresolver=myresolver" \
-              --label "traefik.http.routers.realtime.priority=100" \
-              --label "traefik.http.services.realtime.loadbalancer.server.port=3000" \
-              "$IMG" >/dev/null
-            echo "Verifying $NAME is running"
-            test "$(docker inspect -f '{{.State.Running}}' "$NAME")" = "true"
-            echo "$NAME is running"
             echo "::endgroup::"
           }
 
@@ -179,24 +132,8 @@ jobs:
               traefik:v3.2 \
               --providers.docker=true \
               --providers.docker.network=traefik-net >/dev/null
-            echo "Verifying traefik is running"
-            test "$(docker inspect -f '{{.State.Running}}' traefik)" = "true"
-            echo "traefik is running"
             echo "::endgroup::"
           }
-
-          echo "::group::Prepare rollback image"
-          if docker ps -a --format '{{.Names}}' | grep -q '^server-1$'; then
-            CURR_ID="$(docker inspect -f '{{.Image}}' server-1)"
-            echo "Tagging current server-1 image as $ROLLBACK"
-            docker image tag "$CURR_ID" "$ROLLBACK" || true
-          elif docker image inspect "$IMAGE" >/dev/null 2>&1; then
-            echo "Tagging $IMAGE as $ROLLBACK"
-            docker image tag "$IMAGE" "$ROLLBACK" || true
-          else
-            echo "No image available to tag as rollback"
-          fi
-          echo "::endgroup::"
 
           echo "::group::Docker login"
           echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin >/dev/null
@@ -214,11 +151,16 @@ jobs:
           echo "::endgroup::"
 
           echo "::group::Deploy services"
-          run_api server-1 "$IMAGE"
-          run_api server-2 "$IMAGE"
-          run_api server-3 "$IMAGE"
-          run_api server-4 "$IMAGE"
-          run_realtime server-5 "$IMAGE"
+          run_server server-1 "$IMAGE"
+          run_server server-2 "$IMAGE"
+          run_server server-3 "$IMAGE"
+          run_server server-4 "$IMAGE"
+          run_server server-5 "$IMAGE"
           run_traefik
           echo "All services deployed successfully"
+          echo "::endgroup::"
+
+          echo "::group::Cleanup old images"
+          docker image prune -af >/dev/null 2>&1 || true
+          echo "Old images removed"
           echo "::endgroup::"
