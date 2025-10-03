@@ -70,97 +70,153 @@ jobs:
     needs: docker_push
     env:
       IMAGE_NAME: jpplay/vox-server
+      DOTENV: ${{ secrets.DOTENV }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Deploy
+      - name: Write dotenv to file
+        run: printf '%s\n' "$DOTENV" > .env
+
+      - name: Export dotenv to GitHub environment
+        run: sed '/^\s*$/d' .env | sed '/^\s*#/d' >> $GITHUB_ENV
+
+      - name: Docker login
+        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin >/dev/null
+
+      - name: Prepare network
+        run: docker network create traefik-net >/dev/null 2>&1 || true
+
+      - name: Pull image
+        run: docker pull "$IMAGE_NAME:latest" >/dev/null 2>&1 || true
+
+      - name: Deploy server-1
         env:
           DOMAIN: ${{ secrets.DOMAIN }}
         run: |
-          set -Eeuo pipefail
+          docker rm -f "server-1" >/dev/null 2>&1 || true
+          docker run -d --name "server-1" \
+            --cpus="0.15" \
+            --network traefik-net \
+            --env-file .env \
+            --label "traefik.enable=true" \
+            --label 'traefik.http.routers.api.rule=Host("${{ secrets.DOMAIN }}")' \
+            --label "traefik.http.routers.api.entrypoints=websecure" \
+            --label "traefik.http.routers.api.tls.certresolver=myresolver" \
+            --label "traefik.http.routers.api.priority=10" \
+            --label "traefik.http.routers.api.service=api" \
+            --label "traefik.http.services.api.loadbalancer.server.port=3000" \
+            --label "traefik.http.services.api.loadbalancer.sticky=true" \
+            --label "traefik.http.services.api.loadbalancer.sticky.cookie.name=vox_session" \
+            --label "traefik.http.services.api.loadbalancer.sticky.cookie.secure=true" \
+            --label "traefik.http.services.api.loadbalancer.sticky.cookie.httpOnly=true" \
+            --label "traefik.http.services.api.loadbalancer.sticky.cookie.sameSite=None" \
+            "$IMAGE_NAME:latest" >/dev/null
 
-          echo "::group::Initialize"
-          IMAGE="$IMAGE_NAME:latest"
-          echo "Image to deploy: $IMAGE"
-          echo "::endgroup::"
+      - name: Deploy server-2
+        env:
+          DOMAIN: ${{ secrets.DOMAIN }}
+        run: |
+          docker rm -f "server-2" >/dev/null 2>&1 || true
+          docker run -d --name "server-2" \
+            --cpus="0.15" \
+            --network traefik-net \
+            --env-file .env \
+            --label "traefik.enable=true" \
+            --label 'traefik.http.routers.api.rule=Host("${{ secrets.DOMAIN }}")' \
+            --label "traefik.http.routers.api.entrypoints=websecure" \
+            --label "traefik.http.routers.api.tls.certresolver=myresolver" \
+            --label "traefik.http.routers.api.priority=10" \
+            --label "traefik.http.routers.api.service=api" \
+            --label "traefik.http.services.api.loadbalancer.server.port=3000" \
+            --label "traefik.http.services.api.loadbalancer.sticky=true" \
+            --label "traefik.http.services.api.loadbalancer.sticky.cookie.name=vox_session" \
+            --label "traefik.http.services.api.loadbalancer.sticky.cookie.secure=true" \
+            --label "traefik.http.services.api.loadbalancer.sticky.cookie.httpOnly=true" \
+            --label "traefik.http.services.api.loadbalancer.sticky.cookie.sameSite=None" \
+            "$IMAGE_NAME:latest" >/dev/null
 
-          run_server() {
-            NAME="$1"
-            IMG="$2"
-            echo "::group::Deploy $NAME"
-            echo "Stopping $NAME if exists"
-            docker rm -f "$NAME" >/dev/null 2>&1 || true
-            echo "Starting $NAME with $IMG"
-            docker run -d --name "$NAME" \
-              --cpus="0.15" \
-              --network traefik-net \
-              -e MONGO_URI="${{ secrets.MONGO_URI }}" \
-              -e EMAIL_ADDRESS="${{ secrets.EMAIL_ADDRESS }}" \
-              -e EMAIL_PASSWORD="${{ secrets.EMAIL_PASSWORD }}" \
-              -e JWT_SECRET="${{ secrets.JWT_SECRET }}" \
-              -e SALTS="${{ secrets.SALTS }}" \
-              -e FRONTEND_URL="${{ secrets.FRONTEND_URL }}" \
-              -e URL="${{ secrets.URL }}" \
-              --label "traefik.enable=true" \
-              --label 'traefik.http.routers.api.rule=Host(`'"$DOMAIN"'`) && PathPrefix(`/`)' \
-              --label "traefik.http.routers.api.entrypoints=websecure" \
-              --label "traefik.http.routers.api.tls.certresolver=myresolver" \
-              --label "traefik.http.routers.api.priority=10" \
-              --label "traefik.http.routers.api.service=api" \
-              --label "traefik.http.services.api.loadbalancer.server.port=3000" \
-              --label "traefik.http.services.api.loadbalancer.sticky=true" \
-              --label "traefik.http.services.api.loadbalancer.sticky.cookie.name=vox_session" \
-              --label "traefik.http.services.api.loadbalancer.sticky.cookie.secure=true" \
-              --label "traefik.http.services.api.loadbalancer.sticky.cookie.httpOnly=true" \
-              --label "traefik.http.services.api.loadbalancer.sticky.cookie.sameSite=None" \
-              "$IMG" >/dev/null
-            echo "::endgroup::"
-          }
+      - name: Deploy server-3
+        env:
+          DOMAIN: ${{ secrets.DOMAIN }}
+        run: |
+          docker rm -f "server-3" >/dev/null 2>&1 || true
+          docker run -d --name "server-3" \
+            --cpus="0.15" \
+            --network traefik-net \
+            --env-file .env \
+            --label "traefik.enable=true" \
+            --label 'traefik.http.routers.api.rule=Host("${{ secrets.DOMAIN }}")' \
+            --label "traefik.http.routers.api.entrypoints=websecure" \
+            --label "traefik.http.routers.api.tls.certresolver=myresolver" \
+            --label "traefik.http.routers.api.priority=10" \
+            --label "traefik.http.routers.api.service=api" \
+            --label "traefik.http.services.api.loadbalancer.server.port=3000" \
+            --label "traefik.http.services.api.loadbalancer.sticky=true" \
+            --label "traefik.http.services.api.loadbalancer.sticky.cookie.name=vox_session" \
+            --label "traefik.http.services.api.loadbalancer.sticky.cookie.secure=true" \
+            --label "traefik.http.services.api.loadbalancer.sticky.cookie.httpOnly=true" \
+            --label "traefik.http.services.api.loadbalancer.sticky.cookie.sameSite=None" \
+            "$IMAGE_NAME:latest" >/dev/null
 
-          run_traefik() {
-            echo "::group::Deploy traefik"
-            echo "Stopping traefik if exists"
-            docker rm -f traefik >/dev/null 2>&1 || true
-            echo "Starting traefik"
-            docker run -d --name traefik -p 80:80 -p 443:443 -p 8080:8080 \
-              --network traefik-net \
-              -v "${{ github.workspace }}/traefik.yml:/etc/traefik/traefik.yml:ro" \
-              -v /etc/traefik/letsencrypt:/letsencrypt \
-              -v /var/run/docker.sock:/var/run/docker.sock:ro \
-              -v /etc/traefik/config:/etc/traefik/config \
-              traefik:v3.2 \
-              --providers.docker=true \
-              --providers.docker.network=traefik-net >/dev/null
-            echo "::endgroup::"
-          }
+      - name: Deploy server-4
+        env:
+          DOMAIN: ${{ secrets.DOMAIN }}
+        run: |
+          docker rm -f "server-4" >/dev/null 2>&1 || true
+          docker run -d --name "server-4" \
+            --cpus="0.15" \
+            --network traefik-net \
+            --env-file .env \
+            --label "traefik.enable=true" \
+            --label 'traefik.http.routers.api.rule=Host("${{ secrets.DOMAIN }}")' \
+            --label "traefik.http.routers.api.entrypoints=websecure" \
+            --label "traefik.http.routers.api.tls.certresolver=myresolver" \
+            --label "traefik.http.routers.api.priority=10" \
+            --label "traefik.http.routers.api.service=api" \
+            --label "traefik.http.services.api.loadbalancer.server.port=3000" \
+            --label "traefik.http.services.api.loadbalancer.sticky=true" \
+            --label "traefik.http.services.api.loadbalancer.sticky.cookie.name=vox_session" \
+            --label "traefik.http.services.api.loadbalancer.sticky.cookie.secure=true" \
+            --label "traefik.http.services.api.loadbalancer.sticky.cookie.httpOnly=true" \
+            --label "traefik.http.services.api.loadbalancer.sticky.cookie.sameSite=None" \
+            "$IMAGE_NAME:latest" >/dev/null
 
-          echo "::group::Docker login"
-          echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin >/dev/null
-          echo "Logged in to Docker registry"
-          echo "::endgroup::"
+      - name: Deploy server-5
+        env:
+          DOMAIN: ${{ secrets.DOMAIN }}
+        run: |
+          docker rm -f "server-5" >/dev/null 2>&1 || true
+          docker run -d --name "server-5" \
+            --cpus="0.15" \
+            --network traefik-net \
+            --env-file .env \
+            --label "traefik.enable=true" \
+            --label 'traefik.http.routers.api.rule=Host("${{ secrets.DOMAIN }}")' \
+            --label "traefik.http.routers.api.entrypoints=websecure" \
+            --label "traefik.http.routers.api.tls.certresolver=myresolver" \
+            --label "traefik.http.routers.api.priority=10" \
+            --label "traefik.http.routers.api.service=api" \
+            --label "traefik.http.services.api.loadbalancer.server.port=3000" \
+            --label "traefik.http.services.api.loadbalancer.sticky=true" \
+            --label "traefik.http.services.api.loadbalancer.sticky.cookie.name=vox_session" \
+            --label "traefik.http.services.api.loadbalancer.sticky.cookie.secure=true" \
+            --label "traefik.http.services.api.loadbalancer.sticky.cookie.httpOnly=true" \
+            --label "traefik.http.services.api.loadbalancer.sticky.cookie.sameSite=None" \
+            "$IMAGE_NAME:latest" >/dev/null
 
-          echo "::group::Prepare network"
-          docker network create traefik-net >/dev/null 2>&1 || true
-          echo "Network traefik-net ready"
-          echo "::endgroup::"
+      - name: Deploy traefik
+        run: |
+          docker rm -f traefik >/dev/null 2>&1 || true
+          docker run -d --name traefik -p 80:80 -p 443:443 -p 8080:8080 \
+            --network traefik-net \
+            -v "${{ github.workspace }}/traefik.yml:/etc/traefik/traefik.yml:ro" \
+            -v /etc/traefik/letsencrypt:/letsencrypt \
+            -v /var/run/docker.sock:/var/run/docker.sock:ro \
+            -v /etc/traefik/config:/etc/traefik/config \
+            traefik:v3.2 \
+            --providers.docker=true \
+            --providers.docker.network=traefik-net >/dev/null
 
-          echo "::group::Pull image"
-          docker pull "$IMAGE" >/dev/null 2>&1 || true
-          echo "Pulled $IMAGE"
-          echo "::endgroup::"
-
-          echo "::group::Deploy services"
-          run_server server-1 "$IMAGE"
-          run_server server-2 "$IMAGE"
-          run_server server-3 "$IMAGE"
-          run_server server-4 "$IMAGE"
-          run_server server-5 "$IMAGE"
-          run_traefik
-          echo "All services deployed successfully"
-          echo "::endgroup::"
-
-          echo "::group::Cleanup old images"
-          docker image prune -af >/dev/null 2>&1 || true
-          echo "Old images removed"
-          echo "::endgroup::"
+      - name: Cleanup old images
+        run: docker image prune -af >/dev/null 2>&1 || true
