@@ -1,0 +1,25 @@
+services:
+  server:
+    build:
+      context: .
+    environment:
+      NODE_ENV: development
+      MONGO_URI: mongodb://db:27017/vox
+      REDIS_URI: redis://cache:6379/0
+    ports:
+      - 3000:3000
+  db:
+    image: mongo:8.0
+    volumes:
+      - vox-data:/data/db
+    ports:
+      - '27017:27017'
+  cache:
+    image: redis:7.2-alpine
+    ports:
+      - '6379:6379'
+    volumes:
+      - vox-data:/data
+
+volumes:
+  vox-data:

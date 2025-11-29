@@ -1,0 +1,169 @@
+name: Continuous Integration and Deployment
+
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+    branches:
+      - '**'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  NODE_VERSION: 24.x
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: yarn
+      - name: Install
+        run: yarn install --frozen-lockfile
+      - name: Lint
+        run: yarn lint
+      # - name: Test
+      #   run: yarn test
+      - name: Build
+        run: yarn build
+
+  docker_push:
+    needs: test
+    runs-on: ubuntu-latest
+    env:
+      IMAGE_NAME: jpplay/vox-server
+    outputs:
+      image_digest: ${{ steps.build.outputs.digest }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=latest
+            type=sha,format=long
+      - name: Build and push
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+
+  deploy:
+    runs-on: self-hosted
+    needs: docker_push
+    env:
+      IMAGE_NAME: jpplay/vox-server
+      DOTENV: ${{ secrets.DOTENV }}
+      CPU_LIMIT_APP: "0.35"
+      MEM_LIMIT_APP: "256m"
+      MEM_RESERVATION_APP: "128m"
+      CPU_LIMIT_TRAEFIK: "0.2"
+      MEM_LIMIT_TRAEFIK: "192m"
+      MEM_RESERVATION_TRAEFIK: "96m"
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Write dotenv to file
+        run: printf '%s\n' "$DOTENV" > .env
+
+      - name: Docker login
+        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
+      - name: Prepare network
+        run: docker network create traefik-net || true
+
+      - name: Pull image
+        run: |
+          docker pull "$IMAGE_NAME@${{ needs.docker_push.outputs.image_digest }}" || true
+          docker pull traefik:v3.2 || true
+
+      - name: Deploy server-1
+        env:
+          DOMAIN: ${{ secrets.DOMAIN }}
+        run: |
+          docker rm -f "server-1" || true
+          docker run -d --name "server-1" \
+            --network traefik-net \
+            --env-file .env \
+            --restart=always \
+            --cpus="$CPU_LIMIT_APP" \
+            --memory="$MEM_LIMIT_APP" \
+            --memory-reservation="$MEM_RESERVATION_APP" \
+            --label "traefik.enable=true" \
+            --label 'traefik.http.routers.api.rule=Host("${{ secrets.DOMAIN }}")' \
+            --label "traefik.http.routers.api.entrypoints=websecure" \
+            --label "traefik.http.routers.api.tls.certresolver=myresolver" \
+            --label "traefik.http.routers.api.priority=10" \
+            --label "traefik.http.routers.api.service=api" \
+            --label "traefik.http.services.api.loadbalancer.server.port=3000" \
+            "$IMAGE_NAME@${{ needs.docker_push.outputs.image_digest }}"
+
+      - name: Deploy server-2
+        env:
+          DOMAIN: ${{ secrets.DOMAIN }}
+        run: |
+          docker rm -f "server-2" || true
+          docker run -d --name "server-2" \
+            --network traefik-net \
+            --env-file .env \
+            --restart=always \
+            --cpus="$CPU_LIMIT_APP" \
+            --memory="$MEM_LIMIT_APP" \
+            --memory-reservation="$MEM_RESERVATION_APP" \
+            --label "traefik.enable=true" \
+            --label 'traefik.http.routers.api.rule=Host("${{ secrets.DOMAIN }}") && (PathPrefix("/socket.io/") || PathPrefix("/user"))' \
+            --label 'traefik.http.routers.realtime.rule=Host("${{ secrets.DOMAIN }}") && (PathPrefix("/socket.io/") || PathPrefix("/user"))' \
+            --label "traefik.http.routers.realtime.entrypoints=websecure" \
+            --label "traefik.http.routers.realtime.tls.certresolver=myresolver" \
+            --label "traefik.http.routers.api.entrypoints=websecure" \
+            --label "traefik.http.routers.api.tls.certresolver=myresolver" \
+            --label "traefik.http.routers.api.priority=10" \
+            --label "traefik.http.routers.api.service=api" \
+            --label "traefik.http.services.api.loadbalancer.server.port=3000" \
+            "${IMAGE_NAME}@${{ needs.docker_push.outputs.image_digest }}"
+
+      - name: Deploy traefik
+        run: |
+          docker rm -f traefik || true
+          docker run -d --name traefik -p 80:80 -p 443:443 -p 8080:8080 \
+            --network traefik-net \
+            --restart=always \
+            --cpus="$CPU_LIMIT_TRAEFIK" \
+            --memory="$MEM_LIMIT_TRAEFIK" \
+            --memory-reservation="$MEM_RESERVATION_TRAEFIK" \
+            -v "${{ github.workspace }}/traefik.yml:/etc/traefik/traefik.yml:ro" \
+            -v /etc/traefik/letsencrypt:/letsencrypt \
+            -v /var/run/docker.sock:/var/run/docker.sock:ro \
+            -v /etc/traefik/config:/etc/traefik/config \
+            traefik:v3.2 \
+            --providers.docker=true \
+            --providers.docker.network=traefik-net
+
+      - name: Cleanup old images
+        run: docker image prune -af || true

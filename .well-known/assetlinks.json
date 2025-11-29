@@ -1,0 +1,14 @@
+[
+    {
+        "relation": [
+            "delegate_permission/common.handle_all_urls"
+        ],
+        "target": {
+            "namespace": "android_app",
+            "package_name": "joaopdias.vox.app",
+            "sha256_cert_fingerprints": [
+                "A2:A3:F8:88:EF:9C:73:7B:39:AA:39:F3:27:38:63:03:70:92:E3:DE:51:FB:B7:BC:1F:53:03:EF:EF:98:27:F5"
+            ]
+        }
+    }
+]
