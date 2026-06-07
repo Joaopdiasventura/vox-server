@@ -50,6 +50,7 @@ public class User {
 
     public UserResponseDto toResponseDto() {
         return new UserResponseDto(
+            this.id,
             this.email,
             this.name,
             this.createdAt

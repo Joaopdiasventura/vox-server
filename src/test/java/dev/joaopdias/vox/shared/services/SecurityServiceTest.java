@@ -7,6 +7,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.util.Base64;
 import java.util.UUID;
 
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -73,9 +76,74 @@ class SecurityServiceTest {
             .hasMessage("Token JWT expirado.");
     }
 
+    @Test
+    void rejectsSignedJwtWithMissingRequiredPayloadFields() throws Exception {
+        SecurityService securityService = newSecurityService(15);
+        String token = signedToken("""
+            {"sub":"%s","iat":1}
+            """.formatted(UUID.randomUUID()));
+
+        assertThatThrownBy(() -> securityService.decodeJwt(token))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessage("Token JWT inválido.");
+    }
+
+    @Test
+    void rejectsSignedJwtWithInvalidSubject() throws Exception {
+        SecurityService securityService = newSecurityService(15);
+        String token = signedToken("""
+            {"sub":"not-a-uuid","iat":1,"exp":4102444800}
+            """);
+
+        assertThatThrownBy(() -> securityService.decodeJwt(token))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessage("Token JWT inválido.");
+    }
+
+    @Test
+    void generatesRandomWordWithRequiredLengthAndCharacterClasses() {
+        SecurityService securityService = newSecurityService(15);
+
+        String word = securityService.generateRandomWord(32);
+
+        assertThat(word).hasSize(32);
+        assertThat(word).containsPattern("[A-Z]");
+        assertThat(word).containsPattern("[a-z]");
+        assertThat(word).containsPattern("\\d");
+        assertThat(word).containsPattern("[@$!%*?&._#\\-]");
+        assertThat(word).containsPattern("^[A-Za-z\\d@$!%*?&._#\\-]+$");
+    }
+
+    @Test
+    void rejectsRandomWordLengthBelowMinimum() {
+        SecurityService securityService = newSecurityService(15);
+
+        assertThatThrownBy(() -> securityService.generateRandomWord(7))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessage("A palavra aleatória deve ter no mínimo 8 caracteres.");
+    }
+
     private static SecurityService newSecurityService(long expiresInMinutes) {
-        SecurityService securityService = new SecurityService("test-secret", expiresInMinutes);
+        SecurityService securityService = new SecurityService(expiresInMinutes);
+        ReflectionTestUtils.setField(securityService, "jwtSecret", "test-secret");
         ReflectionTestUtils.setField(securityService, "objectMapper", new ObjectMapper());
         return securityService;
+    }
+
+    private static String signedToken(String payloadJson) throws Exception {
+        String encodedHeader = base64UrlEncode("""
+            {"typ":"JWT","alg":"HS256"}
+            """.getBytes(UTF_8));
+        String encodedPayload = base64UrlEncode(payloadJson.getBytes(UTF_8));
+        String unsignedToken = encodedHeader + "." + encodedPayload;
+
+        Mac mac = Mac.getInstance("HmacSHA256");
+        mac.init(new SecretKeySpec("test-secret".getBytes(UTF_8), "HmacSHA256"));
+
+        return unsignedToken + "." + base64UrlEncode(mac.doFinal(unsignedToken.getBytes(UTF_8)));
+    }
+
+    private static String base64UrlEncode(byte[] value) {
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(value);
     }
 }

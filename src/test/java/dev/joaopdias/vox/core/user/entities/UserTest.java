@@ -34,6 +34,7 @@ class UserTest {
 
         UserResponseDto response = user.toResponseDto();
 
+        assertThat(response.id()).isEqualTo(user.getId());
         assertThat(response.email()).isEqualTo(user.getEmail());
         assertThat(response.name()).isEqualTo(user.getName());
         assertThat(response.createdAt()).isEqualTo(createdAt);

@@ -1,17 +1,21 @@
 package dev.joaopdias.vox.core.user;
 
+import java.time.Duration;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 import dev.joaopdias.vox.core.user.dto.AuthResponseDto;
 import dev.joaopdias.vox.core.user.dto.CreateUserDto;
@@ -19,6 +23,7 @@ import dev.joaopdias.vox.core.user.dto.LoginUserDto;
 import dev.joaopdias.vox.core.user.dto.UpdateUserDto;
 import dev.joaopdias.vox.core.user.dto.UserResponseDto;
 import dev.joaopdias.vox.shared.security.AuthenticatedUser;
+import dev.joaopdias.vox.shared.security.JwtAuthFilter;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 
@@ -34,14 +39,18 @@ public class UserController {
     @Value("${security.cookie.same-site:Strict}")
     private String cookieSameSite;
 
+    private final Duration jwtExpiresIn;
+
+    public UserController(@Value("${security.jwt.expires-in-minutes}") long jwtExpiresInMinutes) {
+        this.jwtExpiresIn = Duration.ofMinutes(jwtExpiresInMinutes);
+    }
+
     @PostMapping()
-    public UserResponseDto create(
+    public String create(
         @RequestBody @Valid CreateUserDto createUserDto,
         HttpServletResponse response
     ) {
-        AuthResponseDto authResponseDto = userService.create(createUserDto);
-        setCookie(authResponseDto.token(), response);
-        return authResponseDto.user();
+        return userService.create(createUserDto);
     }
 
     @PostMapping("/login")
@@ -56,7 +65,7 @@ public class UserController {
 
     @PostMapping("/logout")
     public void logout(HttpServletResponse response) {
-        ResponseCookie cookie = ResponseCookie.from("access_token", "")
+        ResponseCookie cookie = ResponseCookie.from(JwtAuthFilter.getAuthorizationCookieName(), "")
             .httpOnly(true)
             .secure(secureCookie)
             .sameSite(cookieSameSite)
@@ -69,10 +78,13 @@ public class UserController {
 
     @GetMapping()
     public UserResponseDto decodeToken(
-        @CookieValue(name = "access_token") String token,
+        @AuthenticationPrincipal AuthenticatedUser authentication,
         HttpServletResponse response
     ) {
-        AuthResponseDto authResponseDto = userService.decodeToken(token);
+        if (authentication == null)
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Faça login novamente.");
+
+        AuthResponseDto authResponseDto = userService.decodeToken(authentication.id());
         setCookie(authResponseDto.token(), response);
         return authResponseDto.user();
     }
@@ -85,18 +97,33 @@ public class UserController {
         userService.update(authentication.id(), updateUserDto);
     }
 
+    @PatchMapping("validate-account")
+    public UserResponseDto validateAccount(
+        @RequestParam String token,
+        HttpServletResponse response
+    ) {
+        AuthResponseDto authResponseDto = userService.validateAccount(token);
+        setCookie(authResponseDto.token(), response);
+        return authResponseDto.user();
+    }
+
+    @PatchMapping("reset-password")
+    public void resetPassword(@RequestParam String email) {
+        userService.resetPassword(email);
+    }
+
     @DeleteMapping()
-    public void update(@AuthenticationPrincipal AuthenticatedUser authentication) {
+    public void delete(@AuthenticationPrincipal AuthenticatedUser authentication) {
         userService.delete(authentication.id());
     }
 
     private void setCookie(String token, HttpServletResponse response){
-        ResponseCookie cookie = ResponseCookie.from("access_token", token)
+        ResponseCookie cookie = ResponseCookie.from(JwtAuthFilter.getAuthorizationCookieName(), token)
             .httpOnly(true)
             .secure(secureCookie)
             .sameSite(cookieSameSite)
             .path("/")
-            .maxAge(60 * 60 * 2)
+            .maxAge(jwtExpiresIn)
             .build();
 
         response.addHeader("Set-Cookie", cookie.toString());

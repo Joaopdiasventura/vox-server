@@ -12,6 +12,7 @@ import dev.joaopdias.vox.core.user.dto.CreateUserDto;
 import dev.joaopdias.vox.core.user.dto.LoginUserDto;
 import dev.joaopdias.vox.core.user.dto.UpdateUserDto;
 import dev.joaopdias.vox.core.user.entities.User;
+import dev.joaopdias.vox.shared.services.MailService;
 import dev.joaopdias.vox.shared.services.SecurityService;
 
 @Service
@@ -22,7 +23,10 @@ public class UserService {
     @Autowired
     private SecurityService securityService;
 
-    public AuthResponseDto create(CreateUserDto createUserDto){
+    @Autowired
+    private MailService mailService;
+
+    public String create(CreateUserDto createUserDto){
         validateEmail(createUserDto.email());
 
         String hashedPassword = securityService.hashPassword(createUserDto.password());
@@ -37,12 +41,9 @@ public class UserService {
 
         String token = securityService.createJwt(user.getId());
 
-        AuthResponseDto response = new AuthResponseDto(
-            token,
-            user.toResponseDto()
-        );
+        mailService.sendAccountValidationEmail(user.getEmail(), token);
 
-        return response;
+        return "Valide a conta do usuário. Enviamos um email com um link de validação.";
     }
 
     public AuthResponseDto login(LoginUserDto loginUserDto) {
@@ -50,6 +51,9 @@ public class UserService {
 
         if (user == null || !securityService.matchesPassword(loginUserDto.password(), user.getPassword()))
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "E-mail ou senha inválidos");
+
+        if (!user.getIsValidated())
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Conta não validada. Verifique seu email para validar a conta.");
 
         String token = securityService.createJwt(user.getId());
 
@@ -61,10 +65,12 @@ public class UserService {
         return response;
     }
 
-    public AuthResponseDto decodeToken(String token) {
-        UUID id = securityService.decodeJwt(token);
-
+    public AuthResponseDto decodeToken(UUID id) {
         User user = findById(id);
+
+        if (!user.getIsValidated())
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Conta não validada. Verifique seu email para validar a conta.");
+
         String newToken = securityService.createJwt(user.getId());
 
         return new AuthResponseDto(newToken, user.toResponseDto());
@@ -81,6 +87,9 @@ public class UserService {
         if (updateUserDto.email() != null && !updateUserDto.email().equals(user.getEmail())) {
             validateEmail(updateUserDto.email());
             user.setEmail(updateUserDto.email());
+            user.setIsValidated(false);
+            String token = securityService.createJwt(user.getId());
+            mailService.sendAccountValidationEmail(user.getEmail(), token);
         }
 
         if (updateUserDto.name() != null) 
@@ -90,6 +99,34 @@ public class UserService {
             user.setPassword(securityService.hashPassword(updateUserDto.password()));
 
         userRepository.save(user);
+    }
+
+    public AuthResponseDto validateAccount(String token) {
+        UUID id = securityService.decodeJwt(token);
+        User user = findById(id);
+
+        if (user.getIsValidated())
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Conta já validada");
+
+        user.setIsValidated(true);
+        userRepository.save(user);
+
+        String newToken = securityService.createJwt(user.getId());
+
+        return new AuthResponseDto(newToken, user.toResponseDto());
+    }
+
+    public void resetPassword(String email) {
+        User user = userRepository.findByEmail(email);
+
+        if (user == null)
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Conta não encontrada");
+
+        String temporaryPassword = securityService.generateRandomWord(16);
+        user.setPassword(securityService.hashPassword(temporaryPassword));
+        userRepository.save(user);
+
+        mailService.sendTemporaryPasswordEmail(user.getEmail(), temporaryPassword);
     }
 
     public void delete(UUID id) {

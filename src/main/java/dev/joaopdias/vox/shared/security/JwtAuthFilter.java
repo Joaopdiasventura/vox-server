@@ -1,12 +1,14 @@
 package dev.joaopdias.vox.shared.security;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -14,6 +16,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import dev.joaopdias.vox.shared.services.SecurityService;
+import jakarta.servlet.DispatcherType;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
@@ -22,8 +25,14 @@ import jakarta.servlet.http.HttpServletResponse;
 
 @Component
 public class JwtAuthFilter extends OncePerRequestFilter {
+    private static final String AUTHORIZATION_COOKIE_NAME = "Authorization";
+
     @Autowired
     private SecurityService securityService;
+
+    public static String getAuthorizationCookieName() {
+        return AUTHORIZATION_COOKIE_NAME;
+    }
 
     @Override
     protected void doFilterInternal(
@@ -31,7 +40,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         HttpServletResponse response,
         FilterChain filterChain
     ) throws ServletException, IOException {
-        String token = getCookieValue(request, "access_token");
+        String token = getToken(request);
 
         if (token == null || token.isBlank()) {
             filterChain.doFilter(request, response);
@@ -52,15 +61,16 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             SecurityContextHolder.getContext().setAuthentication(authentication);
         } catch (IllegalArgumentException exception) {
             SecurityContextHolder.clearContext();
-            ResponseCookie cookie = ResponseCookie.from("access_token", "")
+            ResponseCookie cookie = ResponseCookie.from(AUTHORIZATION_COOKIE_NAME, "")
                 .httpOnly(true)
                 .path("/")
                 .maxAge(0)
                 .build();
 
             response.addHeader("Set-Cookie", cookie.toString());
-            response.setStatus(HttpStatus.FORBIDDEN.value());
-            response.setContentType("application/json");
+            response.setStatus(HttpStatus.UNAUTHORIZED.value());
+            response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+            response.setContentType("application/json;charset=UTF-8");
             response.getWriter().write("{\"message\":\"Faça login novamente.\"}");
             return;
         }
@@ -70,12 +80,44 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        String path = request.getServletPath();
+        String path = normalizedPath(request);
+
+        if (DispatcherType.ERROR.equals(request.getDispatcherType()) || "/error".equals(path)) return true;
 
         if (HttpMethod.OPTIONS.matches(request.getMethod())) return true;
 
+        if (HttpMethod.PATCH.matches(request.getMethod()) 
+            && "/user/reset-password".equals(path) || "/user/validate-account".equals(path)) 
+            return true;
+
         return HttpMethod.POST.matches(request.getMethod())
             && ("/user".equals(path) || "/user/login".equals(path) || "/user/logout".equals(path));
+    }
+
+    private String getToken(HttpServletRequest request) {
+        String cookieToken = getCookieValue(request, AUTHORIZATION_COOKIE_NAME);
+
+        if (hasText(cookieToken)) return cookieToken;
+
+        String authorization = request.getHeader(HttpHeaders.AUTHORIZATION);
+
+        if (hasText(authorization) && authorization.regionMatches(true, 0, "Bearer ", 0, 7))
+            return authorization.substring(7).trim();
+
+        return "";
+    }
+
+    private String normalizedPath(HttpServletRequest request) {
+        String path = request.getRequestURI();
+        String contextPath = request.getContextPath();
+
+        if (contextPath != null && !contextPath.isBlank() && path.startsWith(contextPath))
+            path = path.substring(contextPath.length());
+
+        if (path.length() > 1 && path.endsWith("/"))
+            path = path.substring(0, path.length() - 1);
+
+        return path;
     }
 
     private String getCookieValue(HttpServletRequest request, String name) {
@@ -87,5 +129,9 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             if (name.equals(cookie.getName())) return cookie.getValue();
 
         return null;
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
     }
 }

@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Instant;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.BeforeAll;
@@ -67,7 +68,7 @@ class UserDtoValidationTest {
 
     @Test
     void authResponseDtoPreservesTokenAndUser() {
-        UserResponseDto user = new UserResponseDto("ana@example.com", "Ana", Instant.parse("2026-01-01T00:00:00Z"));
+        UserResponseDto user = new UserResponseDto(UUID.randomUUID(), "ana@example.com", "Ana", Instant.parse("2026-01-01T00:00:00Z"));
 
         AuthResponseDto dto = new AuthResponseDto("jwt", user);
 
@@ -77,10 +78,12 @@ class UserDtoValidationTest {
 
     @Test
     void userResponseDtoPreservesUserFields() {
+        UUID id = UUID.randomUUID();
         Instant createdAt = Instant.parse("2026-01-01T00:00:00Z");
 
-        UserResponseDto dto = new UserResponseDto("ana@example.com", "Ana", createdAt);
+        UserResponseDto dto = new UserResponseDto(id, "ana@example.com", "Ana", createdAt);
 
+        assertThat(dto.id()).isEqualTo(id);
         assertThat(dto.email()).isEqualTo("ana@example.com");
         assertThat(dto.name()).isEqualTo("Ana");
         assertThat(dto.createdAt()).isEqualTo(createdAt);

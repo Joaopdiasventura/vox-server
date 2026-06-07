@@ -1,34 +1,39 @@
 {
-    "properties": [
-        {
-            "name": "app.instance-id",
-            "type": "java.lang.String",
-            "description": "Unique identifier for the current application instance, used to distinguish nodes when running multiple instances."
-        },
-        {
-            "name": "app.cors.allowed-origins",
-            "type": "java.lang.String",
-            "description": "Semicolon-separated list of origins allowed to access the API through CORS."
-        },
-        {
-            "name": "security.jwt.secret",
-            "type": "java.lang.String",
-            "description": "Secret key used to sign and validate JWT tokens."
-        },
-        {
-            "name": "security.jwt.expires-in-minutes",
-            "type": "java.lang.String",
-            "description": "JWT expiration time in minutes."
-        },
-        {
-            "name": "security.cookie.secure",
-            "type": "java.lang.String",
-            "description": "Defines whether authentication cookies should only be sent over HTTPS connections."
-        },
-        {
-            "name": "security.cookie.same-site",
-            "type": "java.lang.String",
-            "description": "SameSite policy applied to authentication cookies, controlling whether they are sent with cross-site requests."
-        }
-    ]
+  "properties": [
+    {
+      "name": "app.instance-id",
+      "type": "java.lang.String",
+      "description": "Unique identifier for the current application instance, used to distinguish nodes when running multiple instances."
+    },
+    {
+      "name": "app.clients.url",
+      "type": "java.lang.String",
+      "description": "Semicolon-separated list of origins allowed to access the API."
+    },
+    {
+      "name": "security.jwt.secret",
+      "type": "java.lang.String",
+      "description": "Secret key used to sign and validate JWT tokens."
+    },
+    {
+      "name": "security.jwt.expires-in-minutes",
+      "type": "java.lang.String",
+      "description": "JWT expiration time in minutes."
+    },
+    {
+      "name": "security.cookie.secure",
+      "type": "java.lang.String",
+      "description": "Defines whether authentication cookies should only be sent over HTTPS connections."
+    },
+    {
+      "name": "security.cookie.same-site",
+      "type": "java.lang.String",
+      "description": "SameSite policy applied to authentication cookies, controlling whether they are sent with cross-site requests."
+    },
+    {
+      "name": "app.mail.from",
+      "type": "java.lang.String",
+      "description": "A description for 'app.mail.from'"
+    }
+  ]
 }

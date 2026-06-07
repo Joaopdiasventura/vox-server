@@ -2,6 +2,7 @@ package dev.joaopdias.vox.shared.services;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Base64;
@@ -21,19 +22,20 @@ import tools.jackson.databind.ObjectMapper;
 @Service
 public class SecurityService {
     private static final String HMAC_ALGORITHM = "HmacSHA256";
+    private static final String RANDOM_WORD_CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@$!%*?&._#-";
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     @Autowired
-    private  ObjectMapper objectMapper;
+    private ObjectMapper objectMapper;
 
-    private final Argon2PasswordEncoder passwordEncoder = Argon2PasswordEncoder.defaultsForSpringSecurity_v5_8();
-    private final String jwtSecret;
+    @Value("${security.jwt.secret}")
+    private String jwtSecret;
+
     private final Duration jwtExpiresIn;
 
-    public SecurityService(
-        @Value("${security.jwt.secret}") String jwtSecret,
-        @Value("${security.jwt.expires-in-minutes}") long jwtExpiresInMinutes
-    ) {
-        this.jwtSecret = jwtSecret;
+    private final Argon2PasswordEncoder passwordEncoder = Argon2PasswordEncoder.defaultsForSpringSecurity_v5_8();
+
+    public SecurityService(@Value("${security.jwt.expires-in-minutes}") long jwtExpiresInMinutes) {
         this.jwtExpiresIn = Duration.ofMinutes(jwtExpiresInMinutes);
     }
 
@@ -43,6 +45,23 @@ public class SecurityService {
 
     public boolean matchesPassword(String rawPassword, String passwordHash) {
         return passwordEncoder.matches(rawPassword, passwordHash);
+    }
+
+    public String generateRandomWord(int length) {
+        if (length < 8)
+            throw new IllegalArgumentException("A palavra aleatória deve ter no mínimo 8 caracteres.");
+
+        StringBuilder value = new StringBuilder(length);
+
+        value.append(randomChar("ABCDEFGHIJKLMNOPQRSTUVWXYZ"));
+        value.append(randomChar("abcdefghijklmnopqrstuvwxyz"));
+        value.append(randomChar("@$!%*?&._#-"));
+        value.append(randomChar("0123456789"));
+
+        while (value.length() < length)
+            value.append(randomChar(RANDOM_WORD_CHARACTERS));
+
+        return shuffle(value.toString());
     }
 
     public String createJwt(UUID userId) {
@@ -90,17 +109,44 @@ public class SecurityService {
             String payloadJson = new String(base64UrlDecode(parts[1]), StandardCharsets.UTF_8);
             JsonNode payload = objectMapper.readTree(payloadJson);
 
-            Instant expiresAt = Instant.ofEpochSecond(payload.get("exp").asLong());
+            JsonNode expiresAtNode = payload.get("exp");
+            JsonNode subjectNode = payload.get("sub");
+
+            if (expiresAtNode == null || subjectNode == null)
+                throw new IllegalArgumentException("Token JWT inválido.");
+
+            Instant expiresAt = Instant.ofEpochSecond(expiresAtNode.asLong());
 
             if (Instant.now().isAfter(expiresAt))
                 throw new IllegalArgumentException("Token JWT expirado.");
 
-            return UUID.fromString(payload.get("sub").stringValue());
+            try {
+                return UUID.fromString(subjectNode.stringValue());
+            } catch (IllegalArgumentException exception) {
+                throw new IllegalArgumentException("Token JWT inválido.", exception);
+            }
         } catch (IllegalArgumentException exception) {
             throw exception;
         } catch (Exception exception) {
             throw new IllegalArgumentException("Token JWT inválido.", exception);
         }
+    }
+
+    private char randomChar(String characters) {
+        return characters.charAt(SECURE_RANDOM.nextInt(characters.length()));
+    }
+
+    private String shuffle(String value) {
+        char[] characters = value.toCharArray();
+
+        for (int index = characters.length - 1; index > 0; index--) {
+            int randomIndex = SECURE_RANDOM.nextInt(index + 1);
+            char current = characters[index];
+            characters[index] = characters[randomIndex];
+            characters[randomIndex] = current;
+        }
+
+        return new String(characters);
     }
 
     private String sign(String content) throws Exception {
