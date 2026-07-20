@@ -15,7 +15,7 @@ import java.util.UUID;
 @Getter
 @Setter
 @Entity
-@Table(name = "elections")
+@Table(name = "candidates")
 @NoArgsConstructor
 @AllArgsConstructor
 public class Candidate {
@@ -30,7 +30,7 @@ public class Candidate {
     @JoinColumn(name = "fk_election_id")
     private Election election;
 
-    @Column(nullable=false, name="created_at")
+    @Column(nullable = false, name = "created_at")
     private Instant createdAt;
 
     @PrePersist
@@ -38,7 +38,7 @@ public class Candidate {
         this.createdAt = Instant.now();
     }
 
-    public CandidateResponseDto toResponseDto(){
+    public CandidateResponseDto toResponseDto() {
         return new CandidateResponseDto(
                 this.id,
                 this.name,
