@@ -34,8 +34,7 @@ class UserControllerTest {
 
     @BeforeEach
     void setUp() {
-        controller = new UserController(120);
-        ReflectionTestUtils.setField(controller, "userService", userService);
+        controller = new UserController(userService, 120);
         ReflectionTestUtils.setField(controller, "secureCookie", true);
         ReflectionTestUtils.setField(controller, "cookieSameSite", "Lax");
     }

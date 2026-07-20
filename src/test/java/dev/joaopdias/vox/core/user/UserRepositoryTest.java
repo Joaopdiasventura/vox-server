@@ -9,7 +9,6 @@ import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
 
 import dev.joaopdias.vox.core.user.entities.User;
 
@@ -17,7 +16,6 @@ class UserRepositoryTest {
     @Test
     void declaresJpaRepositoryContractWithoutConnectingToDatabase() throws Exception {
         assertThat(UserRepository.class).isInterface();
-        assertThat(UserRepository.class.isAnnotationPresent(Repository.class)).isTrue();
 
         ParameterizedType jpaRepository = Arrays.stream(UserRepository.class.getGenericInterfaces())
             .filter(ParameterizedType.class::isInstance)

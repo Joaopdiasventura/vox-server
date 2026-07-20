@@ -2,7 +2,6 @@ package dev.joaopdias.vox.core.user;
 
 import java.time.Duration;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
@@ -30,8 +29,7 @@ import jakarta.validation.Valid;
 @RestController
 @RequestMapping("/user")
 public class UserController {
-    @Autowired
-    private UserService userService;
+    private final UserService userService;
 
     @Value("${security.cookie.secure:false}")
     private boolean secureCookie;
@@ -41,7 +39,11 @@ public class UserController {
 
     private final Duration jwtExpiresIn;
 
-    public UserController(@Value("${security.jwt.expires-in-minutes}") long jwtExpiresInMinutes) {
+    public UserController(
+        UserService userService,
+        @Value("${security.jwt.expires-in-minutes}") long jwtExpiresInMinutes
+    ) {
+        this.userService = userService;
         this.jwtExpiresIn = Duration.ofMinutes(jwtExpiresInMinutes);
     }
 

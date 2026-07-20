@@ -11,7 +11,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import jakarta.mail.Session;
 import jakarta.mail.internet.InternetAddress;
@@ -28,9 +27,9 @@ class MailServiceTest {
     void setUp() {
         mailService = new MailService(
             "noreply@vox.test",
-            "https://client-a.example; https://client-b.example"
+            "https://client-a.example; https://client-b.example",
+            mailSender
         );
-        ReflectionTestUtils.setField(mailService, "mailSender", mailSender);
     }
 
     @Test

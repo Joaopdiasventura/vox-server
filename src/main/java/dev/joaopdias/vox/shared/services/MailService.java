@@ -5,7 +5,6 @@ import java.nio.charset.StandardCharsets;
 import java.time.Year;
 import java.util.Map;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -17,18 +16,19 @@ import jakarta.mail.internet.MimeMessage;
 
 @Service
 public class MailService {
-    @Autowired
-    private JavaMailSender mailSender;
+    private final JavaMailSender mailSender;
 
     private final String from;
     private final String clientUrl;
 
     public MailService(
         @Value("${app.mail.from}") String from,
-        @Value("${app.clients.url}") String clientsUrl
+        @Value("${app.clients.url}") String clientsUrl,
+        JavaMailSender mailSender
     ) {
         this.from = from;
         this.clientUrl = clientsUrl.split(";")[0].trim();
+        this.mailSender = mailSender;
     }
 
     public void sendAccountValidationEmail(String to, String token) {

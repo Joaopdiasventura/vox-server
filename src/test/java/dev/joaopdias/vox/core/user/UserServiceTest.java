@@ -18,7 +18,6 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
-import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.server.ResponseStatusException;
 
 import dev.joaopdias.vox.core.user.dto.AuthResponseDto;
@@ -46,10 +45,7 @@ class UserServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new UserService();
-        ReflectionTestUtils.setField(service, "userRepository", userRepository);
-        ReflectionTestUtils.setField(service, "securityService", securityService);
-        ReflectionTestUtils.setField(service, "mailService", mailService);
+        service = new UserService(userRepository, securityService, mailService);
     }
 
     @Test

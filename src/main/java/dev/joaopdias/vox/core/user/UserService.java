@@ -2,7 +2,6 @@ package dev.joaopdias.vox.core.user;
 
 import java.util.UUID;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -17,14 +16,21 @@ import dev.joaopdias.vox.shared.services.SecurityService;
 
 @Service
 public class UserService {
-    @Autowired
-    private UserRepository userRepository;
+    private final UserRepository userRepository;
 
-    @Autowired
-    private SecurityService securityService;
+    private final SecurityService securityService;
 
-    @Autowired
-    private MailService mailService;
+    private final MailService mailService;
+
+    public UserService(
+        UserRepository userRepository,
+        SecurityService securityService,
+        MailService mailService
+    ){
+        this.userRepository = userRepository;
+        this.securityService = securityService;
+        this.mailService = mailService;
+    }
 
     public String create(CreateUserDto createUserDto){
         validateEmail(createUserDto.email());

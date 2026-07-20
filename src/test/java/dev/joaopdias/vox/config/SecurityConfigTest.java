@@ -9,6 +9,7 @@ import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import dev.joaopdias.vox.shared.security.JwtAuthFilter;
+import dev.joaopdias.vox.shared.services.SecurityService;
 import jakarta.servlet.DispatcherType;
 
 class SecurityConfigTest {
@@ -55,13 +56,14 @@ class SecurityConfigTest {
 
     @Test
     void disablesServletContainerRegistrationForJwtFilter() {
+        SecurityService securityService = org.mockito.Mockito.mock(SecurityService.class);
         SecurityConfig config = new SecurityConfig(
-            new JwtAuthFilter(),
+            new JwtAuthFilter(securityService),
             new UrlBasedCorsConfigurationSource()
         );
 
         FilterRegistrationBean<JwtAuthFilter> registration =
-            config.jwtAuthFilterRegistration(new JwtAuthFilter());
+            config.jwtAuthFilterRegistration(new JwtAuthFilter(securityService));
 
         assertThat(registration.isEnabled()).isFalse();
     }

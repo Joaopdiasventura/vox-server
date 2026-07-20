@@ -21,7 +21,6 @@ import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import dev.joaopdias.vox.shared.services.SecurityService;
 import jakarta.servlet.DispatcherType;
@@ -37,8 +36,7 @@ class JwtAuthFilterTest {
 
     @BeforeEach
     void setUp() {
-        filter = new JwtAuthFilter();
-        ReflectionTestUtils.setField(filter, "securityService", securityService);
+        filter = new JwtAuthFilter(securityService);
         SecurityContextHolder.clearContext();
     }
 
@@ -98,57 +96,48 @@ class JwtAuthFilterTest {
     }
 
     @Test
-    void authenticatesRequestWhenRawAuthorizationTokenIsValid() throws Exception {
-        UUID id = UUID.randomUUID();
+    void ignoresRawAuthorizationTokenWithoutBearerPrefix() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.addHeader("Authorization", "  valid-jwt  ");
         MockHttpServletResponse response = new MockHttpServletResponse();
         AtomicBoolean continued = new AtomicBoolean(false);
         FilterChain chain = (servletRequest, servletResponse) -> continued.set(true);
-        when(securityService.decodeJwt("valid-jwt")).thenReturn(id);
 
         filter.doFilter(request, response, chain);
 
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         assertThat(continued).isTrue();
-        assertThat(authentication).isNotNull();
-        assertThat(authentication.getPrincipal()).isEqualTo(new AuthenticatedUser(id));
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+        verify(securityService, never()).decodeJwt(any());
     }
 
     @Test
-    void authenticatesRequestWhenAccessTokenHeaderIsValid() throws Exception {
-        UUID id = UUID.randomUUID();
+    void ignoresAccessTokenHeader() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.addHeader("Access_token", "valid-jwt");
         MockHttpServletResponse response = new MockHttpServletResponse();
         AtomicBoolean continued = new AtomicBoolean(false);
         FilterChain chain = (servletRequest, servletResponse) -> continued.set(true);
-        when(securityService.decodeJwt("valid-jwt")).thenReturn(id);
 
         filter.doFilter(request, response, chain);
 
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         assertThat(continued).isTrue();
-        assertThat(authentication).isNotNull();
-        assertThat(authentication.getPrincipal()).isEqualTo(new AuthenticatedUser(id));
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+        verify(securityService, never()).decodeJwt(any());
     }
 
     @Test
-    void authenticatesRequestWhenHyphenatedAccessTokenHeaderIsValid() throws Exception {
-        UUID id = UUID.randomUUID();
+    void ignoresHyphenatedAccessTokenHeader() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.addHeader("Access-Token", "valid-jwt");
         MockHttpServletResponse response = new MockHttpServletResponse();
         AtomicBoolean continued = new AtomicBoolean(false);
         FilterChain chain = (servletRequest, servletResponse) -> continued.set(true);
-        when(securityService.decodeJwt("valid-jwt")).thenReturn(id);
 
         filter.doFilter(request, response, chain);
 
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         assertThat(continued).isTrue();
-        assertThat(authentication).isNotNull();
-        assertThat(authentication.getPrincipal()).isEqualTo(new AuthenticatedUser(id));
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+        verify(securityService, never()).decodeJwt(any());
     }
 
     @Test
@@ -198,8 +187,6 @@ class JwtAuthFilterTest {
     void skipsOptionsAndPublicUserEndpoints() throws Exception {
         MockHttpServletRequest optionsRequest = new MockHttpServletRequest(HttpMethod.OPTIONS.name(), "/anything");
         optionsRequest.setServletPath("/anything");
-        MockHttpServletRequest healthRequest = new MockHttpServletRequest(HttpMethod.GET.name(), "/actuator/health");
-        healthRequest.setServletPath("/actuator/health");
         MockHttpServletRequest createUserRequest = new MockHttpServletRequest(HttpMethod.POST.name(), "/user");
         createUserRequest.setServletPath("/user");
         MockHttpServletRequest loginRequest = new MockHttpServletRequest(HttpMethod.POST.name(), "/user/login");
@@ -217,7 +204,6 @@ class JwtAuthFilterTest {
         privateRequest.setServletPath("/user");
 
         assertThat(filter.shouldNotFilter(optionsRequest)).isTrue();
-        assertThat(filter.shouldNotFilter(healthRequest)).isTrue();
         assertThat(filter.shouldNotFilter(createUserRequest)).isTrue();
         assertThat(filter.shouldNotFilter(loginRequest)).isTrue();
         assertThat(filter.shouldNotFilter(logoutRequest)).isTrue();

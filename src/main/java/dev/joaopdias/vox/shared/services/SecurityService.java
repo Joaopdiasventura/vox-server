@@ -11,7 +11,6 @@ import java.util.UUID;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -25,8 +24,7 @@ public class SecurityService {
     private static final String RANDOM_WORD_CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@$!%*?&._#-";
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
-    @Autowired
-    private ObjectMapper objectMapper;
+    private final ObjectMapper objectMapper;
 
     @Value("${security.jwt.secret}")
     private String jwtSecret;
@@ -35,8 +33,12 @@ public class SecurityService {
 
     private final Argon2PasswordEncoder passwordEncoder = Argon2PasswordEncoder.defaultsForSpringSecurity_v5_8();
 
-    public SecurityService(@Value("${security.jwt.expires-in-minutes}") long jwtExpiresInMinutes) {
+    public SecurityService(
+        @Value("${security.jwt.expires-in-minutes}") long jwtExpiresInMinutes,
+        ObjectMapper objectMapper
+    ) {
         this.jwtExpiresIn = Duration.ofMinutes(jwtExpiresInMinutes);
+        this.objectMapper = objectMapper;
     }
 
     public String hashPassword(String password) {

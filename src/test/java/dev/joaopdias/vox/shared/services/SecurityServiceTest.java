@@ -124,9 +124,8 @@ class SecurityServiceTest {
     }
 
     private static SecurityService newSecurityService(long expiresInMinutes) {
-        SecurityService securityService = new SecurityService(expiresInMinutes);
+        SecurityService securityService = new SecurityService(expiresInMinutes, new ObjectMapper());
         ReflectionTestUtils.setField(securityService, "jwtSecret", "test-secret");
-        ReflectionTestUtils.setField(securityService, "objectMapper", new ObjectMapper());
         return securityService;
     }
 

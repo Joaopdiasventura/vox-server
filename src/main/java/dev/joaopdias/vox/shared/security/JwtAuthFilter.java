@@ -27,8 +27,11 @@ import jakarta.servlet.http.HttpServletResponse;
 public class JwtAuthFilter extends OncePerRequestFilter {
     private static final String AUTHORIZATION_COOKIE_NAME = "Authorization";
 
-    @Autowired
-    private SecurityService securityService;
+    private final SecurityService securityService;
+
+    public JwtAuthFilter(SecurityService securityService){
+        this.securityService = securityService;
+    }
 
     public static String getAuthorizationCookieName() {
         return AUTHORIZATION_COOKIE_NAME;
