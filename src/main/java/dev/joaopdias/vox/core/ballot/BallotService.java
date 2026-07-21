@@ -65,6 +65,12 @@ public class BallotService {
         return this.ballotRepository.findManyByElectionsId(electionsId, pageable).stream().map(Ballot::toResponseDto);
     }
 
+    public void changeState(UUID id, Boolean isOpen) {
+        Ballot ballot = this.findById(id);
+        ballot.setIsOpen(isOpen);
+        this.ballotRepository.save(ballot);
+    }
+
     public void delete(UUID id) {
         Ballot ballot = this.findById(id);
         Instant now = new Date().toInstant();

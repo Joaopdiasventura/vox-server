@@ -33,11 +33,19 @@ public class Ballot {
     )
     private Set<Election> elections;
 
+    @Column(nullable=false, name="is_open")
+    private Boolean isOpen;
+
     @Column(nullable = false, name = "start_at")
     private Instant startAt;
 
     @Column(nullable = false, name = "end_at")
     private Instant endAt;
+
+    @PrePersist
+    public void prePersist() {
+        this.isOpen = Boolean.FALSE;
+    }
 
     public BallotResponseDto toResponseDto() {
         return new BallotResponseDto(
