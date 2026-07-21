@@ -15,9 +15,14 @@ import java.util.UUID;
 @Getter
 @Setter
 @Entity
-@Table(name = "candidates")
 @NoArgsConstructor
 @AllArgsConstructor
+@Table(
+        name = "candidates",
+        indexes = {
+                @Index(name = "idx_candidate_election_id", columnList = "fk_election_id")
+        }
+)
 public class Candidate {
     @Id
     @UuidGenerator(style = UuidGenerator.Style.VERSION_7)

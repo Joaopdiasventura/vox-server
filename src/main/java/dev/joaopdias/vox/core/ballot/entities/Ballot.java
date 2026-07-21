@@ -28,12 +28,15 @@ public class Ballot {
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
             name = "ballot_election",
-            joinColumns = @JoinColumn(name = "fk_ballot_id"),
-            inverseJoinColumns = @JoinColumn(name = "fk_election_id")
+            joinColumns = @JoinColumn(name = "fk_ballot_id", nullable = false),
+            inverseJoinColumns = @JoinColumn(name = "fk_election_id", nullable = false),
+            indexes = {
+                    @Index(name = "idx_ballot_election_election_ballot", columnList = "fk_election_id, fk_ballot_id")
+            }
     )
     private Set<Election> elections;
 
-    @Column(nullable=false, name="is_open")
+    @Column(nullable = false, name = "is_open")
     private Boolean isOpen;
 
     @Column(nullable = false, name = "start_at")
