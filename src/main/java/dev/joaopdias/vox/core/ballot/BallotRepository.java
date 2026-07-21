@@ -9,5 +9,8 @@ import java.util.Set;
 import java.util.UUID;
 
 public interface BallotRepository extends JpaRepository<Ballot, UUID> {
-    Page<Ballot> findManyByElectionsId(Set<UUID> electionsId, Pageable pageable);
+    Page<Ballot> findDistinctByElections_IdIn(
+            Set<UUID> electionIds,
+            Pageable pageable
+    );
 }

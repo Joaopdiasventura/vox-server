@@ -62,7 +62,9 @@ public class BallotService {
 
     public Stream<BallotResponseDto> findByElections(Set<UUID> electionsId, Pageable pageable) {
         electionsId.forEach(this.electionService::findById);
-        return this.ballotRepository.findManyByElectionsId(electionsId, pageable).stream().map(Ballot::toResponseDto);
+        return this.ballotRepository.findDistinctByElections_IdIn(electionsId, pageable)
+                .stream()
+                .map(Ballot::toResponseDto);
     }
 
     public void changeState(UUID id, Boolean isOpen) {

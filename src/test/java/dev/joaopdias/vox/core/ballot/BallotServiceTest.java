@@ -133,14 +133,14 @@ class BallotServiceTest {
         Pageable pageable = PageRequest.of(0, 10);
         Ballot first = ballot(UUID.randomUUID(), START_AT, END_AT);
         Ballot second = ballot(UUID.randomUUID(), START_AT.plusSeconds(3600), END_AT.plusSeconds(3600));
-        when(ballotRepository.findManyByElectionsId(electionsId, pageable))
+        when(ballotRepository.findDistinctByElections_IdIn(electionsId, pageable))
             .thenReturn(new PageImpl<>(List.of(first, second)));
 
         List<BallotResponseDto> result = service.findByElections(electionsId, pageable).toList();
 
         verify(electionService).findById(firstElectionId);
         verify(electionService).findById(secondElectionId);
-        verify(ballotRepository).findManyByElectionsId(electionsId, pageable);
+        verify(ballotRepository).findDistinctByElections_IdIn(electionsId, pageable);
         assertThat(result).containsExactly(first.toResponseDto(), second.toResponseDto());
     }
 
