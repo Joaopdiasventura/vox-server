@@ -11,7 +11,7 @@ import java.util.UUID;
 
 public interface VoteRepository extends JpaRepository<Vote, UUID> {
     @Query("""
-            SELECT new VoteResultDto(
+            SELECT new dev.joaopdias.vox.core.vote.dto.VoteResultDto(
                 COUNT(v.id),
                 v.candidate
             )
