@@ -4,12 +4,12 @@ import dev.joaopdias.vox.core.election.dto.CreateElectionDto;
 import dev.joaopdias.vox.core.election.dto.ElectionResponseDto;
 import dev.joaopdias.vox.core.election.dto.UpdateElectionDto;
 import dev.joaopdias.vox.shared.security.AuthenticatedUser;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
-import java.util.stream.Stream;
 
 @RestController
 @RequestMapping("/election")
@@ -29,7 +29,7 @@ public class ElectionController {
     }
 
     @GetMapping()
-    public Stream<ElectionResponseDto> findManyByUser(
+    public Page<ElectionResponseDto> findManyByUser(
             @AuthenticationPrincipal AuthenticatedUser user,
             Pageable pageable
     ) {
@@ -50,7 +50,7 @@ public class ElectionController {
     }
 
     @DeleteMapping("/{id}")
-    public void delete(@PathVariable UUID id){
+    public void delete(@PathVariable UUID id) {
         this.electionService.delete(id);
     }
 }

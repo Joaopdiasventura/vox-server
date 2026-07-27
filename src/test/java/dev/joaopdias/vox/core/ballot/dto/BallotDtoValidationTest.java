@@ -38,7 +38,7 @@ class BallotDtoValidationTest {
         Instant endAt = Instant.parse("2026-01-02T00:00:00Z");
         Set<Election> elections = Set.of(election(UUID.randomUUID()));
 
-        BallotResponseDto dto = new BallotResponseDto(id, elections, startAt, endAt);
+        BallotResponseDto dto = new BallotResponseDto(id, elections, false, startAt, endAt);
 
         assertThat(dto.id()).isEqualTo(id);
         assertThat(dto.elections()).isEqualTo(elections);

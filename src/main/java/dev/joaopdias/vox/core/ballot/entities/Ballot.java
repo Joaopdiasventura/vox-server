@@ -2,6 +2,7 @@ package dev.joaopdias.vox.core.ballot.entities;
 
 
 import dev.joaopdias.vox.core.ballot.dto.BallotResponseDto;
+import dev.joaopdias.vox.core.election.dto.ElectionResponseDto;
 import dev.joaopdias.vox.core.election.entities.Election;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -13,6 +14,7 @@ import org.hibernate.annotations.UuidGenerator;
 import java.time.Instant;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Getter
 @Setter
@@ -51,9 +53,15 @@ public class Ballot {
     }
 
     public BallotResponseDto toResponseDto() {
+        Set<ElectionResponseDto> electionDtos = this.elections
+                .stream()
+                .map(Election::toResponseDto)
+                .collect(Collectors.toUnmodifiableSet());
+
         return new BallotResponseDto(
                 this.id,
-                this.elections,
+                electionDtos,
+                this.isOpen,
                 this.startAt,
                 this.endAt
         );

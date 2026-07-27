@@ -1,9 +1,9 @@
 package dev.joaopdias.vox.core.vote.dto;
 
-import dev.joaopdias.vox.core.candidate.entities.Candidate;
+import dev.joaopdias.vox.core.candidate.dto.CandidateResponseDto;
 
 public record VoteResultDto(
         Long count,
-        Candidate candidate
+        CandidateResponseDto candidate
 ) {
 }

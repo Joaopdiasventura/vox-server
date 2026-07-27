@@ -1,20 +1,18 @@
 package dev.joaopdias.vox.core.election;
 
+import dev.joaopdias.vox.core.election.dto.CreateElectionDto;
 import dev.joaopdias.vox.core.election.dto.ElectionResponseDto;
 import dev.joaopdias.vox.core.election.dto.UpdateElectionDto;
+import dev.joaopdias.vox.core.election.entities.Election;
+import dev.joaopdias.vox.core.user.UserService;
 import dev.joaopdias.vox.core.user.entities.User;
-import org.hibernate.query.Page;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-
-import dev.joaopdias.vox.core.user.UserService;
-import dev.joaopdias.vox.core.election.entities.Election;
-import dev.joaopdias.vox.core.election.dto.CreateElectionDto;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.UUID;
-import java.util.stream.Stream;
 
 @Service
 public class ElectionService {
@@ -22,9 +20,9 @@ public class ElectionService {
     private final UserService userService;
 
     public ElectionService(
-        ElectionRepository electionRepository,
-        UserService userService
-    ){
+            ElectionRepository electionRepository,
+            UserService userService
+    ) {
         this.electionRepository = electionRepository;
         this.userService = userService;
     }
@@ -47,9 +45,9 @@ public class ElectionService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Eleição não encontrada"));
     }
 
-    public Stream<ElectionResponseDto> findManyByUser(UUID userId, Pageable pageable) {
+    public Page<ElectionResponseDto> findManyByUser(UUID userId, Pageable pageable) {
         this.userService.findById(userId);
-        return this.electionRepository.findByUserId(userId, pageable).stream().map(Election::toResponseDto);
+        return this.electionRepository.findByUserId(userId, pageable).map(Election::toResponseDto);
     }
 
     public void update(UUID id, UpdateElectionDto updateElectionDto) {

@@ -3,11 +3,16 @@ package dev.joaopdias.vox.core.ballot;
 import dev.joaopdias.vox.core.ballot.dto.BallotResponseDto;
 import dev.joaopdias.vox.core.ballot.dto.CreateBallotDto;
 import dev.joaopdias.vox.core.ballot.entities.Ballot;
+import dev.joaopdias.vox.core.ballot.events.BallotEvent;
+import dev.joaopdias.vox.core.ballot.types.BallotEventType;
 import dev.joaopdias.vox.core.election.ElectionService;
 import dev.joaopdias.vox.core.election.entities.Election;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
@@ -15,19 +20,22 @@ import java.util.Date;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 @Service
 public class BallotService {
     private final BallotRepository ballotRepository;
 
+    private final SimpMessagingTemplate messagingTemplate;
+
     private final ElectionService electionService;
 
     public BallotService(
             BallotRepository ballotRepository,
+            SimpMessagingTemplate messagingTemplate,
             ElectionService electionService
     ) {
         this.ballotRepository = ballotRepository;
+        this.messagingTemplate = messagingTemplate;
         this.electionService = electionService;
     }
 
@@ -60,17 +68,28 @@ public class BallotService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Urna não encontrada"));
     }
 
-    public Stream<BallotResponseDto> findByElections(Set<UUID> electionsId, Pageable pageable) {
-        electionsId.forEach(this.electionService::findById);
-        return this.ballotRepository.findDistinctByElections_IdIn(electionsId, pageable)
-                .stream()
+    public Page<BallotResponseDto> findByUserId(UUID userId, Pageable pageable) {
+        return this.ballotRepository.findByUserId(userId, pageable)
                 .map(Ballot::toResponseDto);
     }
 
+    @Transactional()
     public void changeState(UUID id, Boolean isOpen) {
         Ballot ballot = this.findById(id);
         ballot.setIsOpen(isOpen);
+
+        BallotEvent event = new BallotEvent(
+                id,
+                isOpen ? BallotEventType.OPENED : BallotEventType.CLOSED,
+                Instant.now()
+        );
+
         this.ballotRepository.save(ballot);
+
+        this.messagingTemplate.convertAndSend(
+                "/topic/ballot/" + id,
+                event
+        );
     }
 
     public void delete(UUID id) {

@@ -6,13 +6,13 @@ import dev.joaopdias.vox.core.candidate.dto.UpdateCandidateDto;
 import dev.joaopdias.vox.core.candidate.entities.Candidate;
 import dev.joaopdias.vox.core.election.ElectionService;
 import dev.joaopdias.vox.core.election.entities.Election;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.UUID;
-import java.util.stream.Stream;
 
 @Service
 public class CandidateService {
@@ -23,12 +23,12 @@ public class CandidateService {
     public CandidateService(
             CandidateRepository candidateRepository,
             ElectionService electionService
-    ){
+    ) {
         this.candidateRepository = candidateRepository;
         this.electionService = electionService;
     }
 
-    public CandidateResponseDto create(CreateCandidateDto createCandidateDto){
+    public CandidateResponseDto create(CreateCandidateDto createCandidateDto) {
         Election election = this.electionService.findById(createCandidateDto.electionId());
 
         Candidate candidate = new Candidate();
@@ -41,18 +41,18 @@ public class CandidateService {
         return candidate.toResponseDto();
     }
 
-    public Candidate findById(UUID id){
+    public Candidate findById(UUID id) {
         return this.candidateRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Candidato não encontrado"));
     }
 
-    public Stream<CandidateResponseDto> findManyByElection(UUID electionId, Pageable pageable){
+    public Page<CandidateResponseDto> findManyByElection(UUID electionId, Pageable pageable) {
         this.electionService.findById(electionId);
         return this.candidateRepository
-                .findManyByElectionId(electionId, pageable).stream().map(Candidate::toResponseDto);
+                .findManyByElectionId(electionId, pageable).map(Candidate::toResponseDto);
     }
 
-    public void update(UUID id, UpdateCandidateDto updateCandidateDto){
+    public void update(UUID id, UpdateCandidateDto updateCandidateDto) {
         Candidate candidate = this.findById(id);
 
         if (updateCandidateDto.name() != null) candidate.setName(updateCandidateDto.name());
@@ -60,7 +60,7 @@ public class CandidateService {
         this.candidateRepository.save(candidate);
     }
 
-    public void delete(UUID id){
+    public void delete(UUID id) {
         Candidate candidate = this.findById(id);
         this.candidateRepository.delete(candidate);
 

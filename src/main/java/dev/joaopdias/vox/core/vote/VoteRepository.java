@@ -13,9 +13,14 @@ public interface VoteRepository extends JpaRepository<Vote, UUID> {
     @Query("""
             SELECT new dev.joaopdias.vox.core.vote.dto.VoteResultDto(
                 COUNT(v.id),
-                v.candidate
+                new dev.joaopdias.vox.core.candidate.dto.CandidateResponseDto(
+                    v.candidate.id,
+                    v.candidate.name,
+                    v.candidate.createdAt
+                )
             )
             FROM Vote v
+            JOIN v.candidate c
             JOIN v.ballot b
             JOIN b.elections e
             WHERE b.id = :ballotId

@@ -1,15 +1,9 @@
 package dev.joaopdias.vox.core.candidate;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
-import java.lang.reflect.Method;
-import java.time.Instant;
-import java.util.List;
-import java.util.UUID;
-import java.util.stream.Stream;
-
+import dev.joaopdias.vox.core.candidate.dto.CandidateResponseDto;
+import dev.joaopdias.vox.core.candidate.dto.CreateCandidateDto;
+import dev.joaopdias.vox.core.candidate.dto.UpdateCandidateDto;
+import dev.joaopdias.vox.core.candidate.entities.Candidate;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -19,10 +13,14 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.web.bind.annotation.PathVariable;
 
-import dev.joaopdias.vox.core.candidate.dto.CandidateResponseDto;
-import dev.joaopdias.vox.core.candidate.dto.CreateCandidateDto;
-import dev.joaopdias.vox.core.candidate.dto.UpdateCandidateDto;
-import dev.joaopdias.vox.core.candidate.entities.Candidate;
+import java.lang.reflect.Method;
+import java.time.Instant;
+import java.util.List;
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class CandidateControllerTest {
@@ -32,6 +30,18 @@ class CandidateControllerTest {
     private CandidateService candidateService;
 
     private CandidateController controller;
+
+    private static CandidateResponseDto candidateResponse(String name) {
+        return new CandidateResponseDto(UUID.randomUUID(), name, CREATED_AT);
+    }
+
+    private static Candidate candidate(UUID id, String name) {
+        Candidate candidate = new Candidate();
+        candidate.setId(id);
+        candidate.setName(name);
+        candidate.setCreatedAt(CREATED_AT);
+        return candidate;
+    }
 
     @BeforeEach
     void setUp() {
@@ -55,7 +65,6 @@ class CandidateControllerTest {
         UUID electionId = UUID.randomUUID();
         Pageable pageable = PageRequest.of(1, 10);
         CandidateResponseDto response = candidateResponse("Ana");
-        when(candidateService.findManyByElection(electionId, pageable)).thenReturn(Stream.of(response));
 
         List<CandidateResponseDto> result = controller.findManyByElection(electionId, pageable).toList();
 
@@ -98,17 +107,5 @@ class CandidateControllerTest {
         controller.delete(id);
 
         verify(candidateService).delete(id);
-    }
-
-    private static CandidateResponseDto candidateResponse(String name) {
-        return new CandidateResponseDto(UUID.randomUUID(), name, CREATED_AT);
-    }
-
-    private static Candidate candidate(UUID id, String name) {
-        Candidate candidate = new Candidate();
-        candidate.setId(id);
-        candidate.setName(name);
-        candidate.setCreatedAt(CREATED_AT);
-        return candidate;
     }
 }

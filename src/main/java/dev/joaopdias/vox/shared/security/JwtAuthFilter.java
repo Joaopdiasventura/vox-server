@@ -1,11 +1,12 @@
 package dev.joaopdias.vox.shared.security;
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.util.List;
-import java.util.UUID;
-
-import org.springframework.beans.factory.annotation.Autowired;
+import dev.joaopdias.vox.shared.services.SecurityService;
+import jakarta.servlet.DispatcherType;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
@@ -15,13 +16,10 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-import dev.joaopdias.vox.shared.services.SecurityService;
-import jakarta.servlet.DispatcherType;
-import jakarta.servlet.FilterChain;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.Cookie;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.UUID;
 
 @Component
 public class JwtAuthFilter extends OncePerRequestFilter {
@@ -29,7 +27,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final SecurityService securityService;
 
-    public JwtAuthFilter(SecurityService securityService){
+    public JwtAuthFilter(SecurityService securityService) {
         this.securityService = securityService;
     }
 
@@ -39,9 +37,9 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(
-        HttpServletRequest request,
-        HttpServletResponse response,
-        FilterChain filterChain
+            HttpServletRequest request,
+            HttpServletResponse response,
+            FilterChain filterChain
     ) throws ServletException, IOException {
         String token = getToken(request);
 
@@ -56,19 +54,19 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             AuthenticatedUser authenticatedUser = new AuthenticatedUser(id);
 
             UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                authenticatedUser,
-                null,
-                List.of()
+                    authenticatedUser,
+                    null,
+                    List.of()
             );
 
             SecurityContextHolder.getContext().setAuthentication(authentication);
         } catch (IllegalArgumentException exception) {
             SecurityContextHolder.clearContext();
             ResponseCookie cookie = ResponseCookie.from(AUTHORIZATION_COOKIE_NAME, "")
-                .httpOnly(true)
-                .path("/")
-                .maxAge(0)
-                .build();
+                    .httpOnly(true)
+                    .path("/")
+                    .maxAge(0)
+                    .build();
 
             response.addHeader("Set-Cookie", cookie.toString());
             response.setStatus(HttpStatus.UNAUTHORIZED.value());
@@ -84,17 +82,21 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = normalizedPath(request);
+        String protocol = request.getServletPath();
 
         if (DispatcherType.ERROR.equals(request.getDispatcherType()) || "/error".equals(path)) return true;
 
         if (HttpMethod.OPTIONS.matches(request.getMethod())) return true;
 
-        if (HttpMethod.PATCH.matches(request.getMethod()) 
-            && "/user/reset-password".equals(path) || "/user/validate-account".equals(path)) 
+        if (HttpMethod.PATCH.matches(request.getMethod())
+                && "/user/reset-password".equals(path) || "/user/validate-account".equals(path))
             return true;
 
-        return HttpMethod.POST.matches(request.getMethod())
-            && ("/user".equals(path) || "/user/login".equals(path) || "/user/logout".equals(path));
+        if (HttpMethod.POST.matches(request.getMethod())
+                && ("/user".equals(path) || "/user/login".equals(path) || "/user/logout".equals(path)))
+            return true;
+
+        return protocol.equals("/ws") || protocol.startsWith("/ws/");
     }
 
     private String getToken(HttpServletRequest request) {
@@ -127,8 +129,8 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         Cookie[] cookies = request.getCookies();
 
         if (cookies == null) return null;
-        
-        for (Cookie cookie : cookies) 
+
+        for (Cookie cookie : cookies)
             if (name.equals(cookie.getName())) return cookie.getValue();
 
         return null;

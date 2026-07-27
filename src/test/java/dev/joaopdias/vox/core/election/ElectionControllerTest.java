@@ -1,14 +1,10 @@
 package dev.joaopdias.vox.core.election;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
-import java.time.Instant;
-import java.util.List;
-import java.util.UUID;
-import java.util.stream.Stream;
-
+import dev.joaopdias.vox.core.election.dto.CreateElectionDto;
+import dev.joaopdias.vox.core.election.dto.ElectionResponseDto;
+import dev.joaopdias.vox.core.election.dto.UpdateElectionDto;
+import dev.joaopdias.vox.core.election.entities.Election;
+import dev.joaopdias.vox.shared.security.AuthenticatedUser;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -17,11 +13,13 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
-import dev.joaopdias.vox.core.election.dto.CreateElectionDto;
-import dev.joaopdias.vox.core.election.dto.ElectionResponseDto;
-import dev.joaopdias.vox.core.election.dto.UpdateElectionDto;
-import dev.joaopdias.vox.core.election.entities.Election;
-import dev.joaopdias.vox.shared.security.AuthenticatedUser;
+import java.time.Instant;
+import java.util.List;
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class ElectionControllerTest {
@@ -31,6 +29,18 @@ class ElectionControllerTest {
     private ElectionService electionService;
 
     private ElectionController controller;
+
+    private static ElectionResponseDto electionResponse() {
+        return new ElectionResponseDto(UUID.randomUUID(), "Eleição 2026", CREATED_AT);
+    }
+
+    private static Election election() {
+        Election election = new Election();
+        election.setId(UUID.randomUUID());
+        election.setName("Eleição 2026");
+        election.setCreatedAt(CREATED_AT);
+        return election;
+    }
 
     @BeforeEach
     void setUp() {
@@ -55,7 +65,6 @@ class ElectionControllerTest {
         UUID userId = UUID.randomUUID();
         Pageable pageable = PageRequest.of(1, 10);
         ElectionResponseDto response = electionResponse();
-        when(electionService.findManyByUser(userId, pageable)).thenReturn(Stream.of(response));
 
         List<ElectionResponseDto> result = controller.findManyByUser(new AuthenticatedUser(userId), pageable).toList();
 
@@ -91,17 +100,5 @@ class ElectionControllerTest {
         controller.delete(id);
 
         verify(electionService).delete(id);
-    }
-
-    private static ElectionResponseDto electionResponse() {
-        return new ElectionResponseDto(UUID.randomUUID(), "Eleição 2026", CREATED_AT);
-    }
-
-    private static Election election() {
-        Election election = new Election();
-        election.setId(UUID.randomUUID());
-        election.setName("Eleição 2026");
-        election.setCreatedAt(CREATED_AT);
-        return election;
     }
 }
