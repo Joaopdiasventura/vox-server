@@ -7,6 +7,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.jspecify.annotations.NonNull;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
@@ -80,23 +81,23 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     }
 
     @Override
-    protected boolean shouldNotFilter(HttpServletRequest request) {
+    protected boolean shouldNotFilter(@NonNull HttpServletRequest request) {
         String path = normalizedPath(request);
-        String protocol = request.getServletPath();
 
-        if (DispatcherType.ERROR.equals(request.getDispatcherType()) || "/error".equals(path)) return true;
+        if (DispatcherType.ERROR.equals(request.getDispatcherType()) || "/error".equals(path))
+            return true;
 
-        if (HttpMethod.OPTIONS.matches(request.getMethod())) return true;
+        if (HttpMethod.OPTIONS.matches(request.getMethod()))
+            return true;
 
         if (HttpMethod.PATCH.matches(request.getMethod())
-                && "/user/reset-password".equals(path) || "/user/validate-account".equals(path))
+                && ("/user/reset-password".equals(path) || "/user/validate-account".equals(path)))
             return true;
 
-        if (HttpMethod.POST.matches(request.getMethod())
-                && ("/user".equals(path) || "/user/login".equals(path) || "/user/logout".equals(path)))
-            return true;
-
-        return protocol.equals("/ws") || protocol.startsWith("/ws/");
+        return HttpMethod.POST.matches(request.getMethod())
+                && ("/user".equals(path)
+                || "/user/login".equals(path)
+                || "/user/logout".equals(path));
     }
 
     private String getToken(HttpServletRequest request) {
