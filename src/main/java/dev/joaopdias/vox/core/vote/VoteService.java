@@ -28,8 +28,7 @@ public class VoteService {
     public VoteService(
             VoteRepository voteRepository,
             CandidateService candidateService,
-            BallotService ballotService
-    ) {
+            BallotService ballotService) {
         this.voteRepository = voteRepository;
         this.candidateService = candidateService;
         this.ballotService = ballotService;
@@ -41,25 +40,31 @@ public class VoteService {
 
         Ballot ballot = this.ballotService.findByIdLocked(createVoteDto.ballotId());
 
+        boolean candidateBelongsToBallot = ballot.getElections()
+                .stream()
+                .anyMatch(election -> election.getId().equals(candidate.getElection().getId()));
+
+        if (!candidateBelongsToBallot)
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Esse candidato não faz parte de nenhuma eleição dessa urna");
+
         if (!ballot.getIsOpen())
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
-                    "A urna não está aberta"
-            );
+                    "A urna não está aberta");
 
         Instant now = new Date().toInstant();
 
         if (now.compareTo(ballot.getStartAt()) < 0)
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
-                    "Essa votação ainda não iniciou"
-            );
+                    "Essa votação ainda não iniciou");
 
         if (now.compareTo(ballot.getEndAt()) > 0)
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
-                    "Essa votação já encerrou"
-            );
+                    "Essa votação já encerrou");
 
         Vote vote = new Vote();
 
@@ -74,7 +79,7 @@ public class VoteService {
     }
 
     @Transactional(readOnly = true)
-    public List<VoteResultDto> findResult(UUID electionId, UUID ballotId){
+    public List<VoteResultDto> findResult(UUID electionId, UUID ballotId) {
         return this.voteRepository.findResult(electionId, ballotId);
     }
 }
