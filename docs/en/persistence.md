@@ -38,7 +38,7 @@ These indexes align with implemented lookups and joins for listing elections by 
 ```mermaid
 flowchart LR
     Services --> Repositories
-    Repositories --> Hibernate[JPA/Hibernate]
+    Repositories --> Hibernate["JPA/Hibernate"]
     Hibernate --> Postgres[(PostgreSQL)]
     Hibernate --> Schema[ddl-auto update]
 ```

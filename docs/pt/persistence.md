@@ -38,7 +38,7 @@ Esses índices acompanham buscas e joins implementados para listar eleições po
 ```mermaid
 flowchart LR
     Services --> Repositories
-    Repositories --> Hibernate[JPA/Hibernate]
+    Repositories --> Hibernate["JPA/Hibernate"]
     Hibernate --> Postgres[(PostgreSQL)]
     Hibernate --> Schema[ddl-auto update]
 ```

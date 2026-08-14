@@ -17,7 +17,7 @@ This repository contains the server component of the Vox project: a Spring Boot 
 - Spring Boot 4.0.6
 - Spring Web, Spring Security, Spring Data JPA, Spring WebSocket
 - PostgreSQL in local/container configuration
-- RabbitMQ dependency and Docker service; STOMP uses Spring's simple in-memory broker
+- STOMP uses Spring's simple in-memory broker; Spring Cloud Stream/Rabbit dependencies remain in `pom.xml` but no stream binding is implemented
 - Maven
 - Docker and Docker Compose
 
@@ -27,13 +27,13 @@ The code is organized by feature package under `dev.joaopdias.vox.core`. HTTP co
 
 ```mermaid
 flowchart LR
-    Client[HTTP/STOMP client]
+    Client["HTTP/STOMP client"]
     REST[REST controllers]
     WS[BallotGateway]
     Services[Feature services]
     Repos[Spring Data JPA repositories]
     DB[(PostgreSQL)]
-    Topic[/topic/ballot/{id}/]
+    Topic["/topic/ballot/{id}"]
 
     Client --> REST --> Services --> Repos --> DB
     Client --> WS --> Services
@@ -66,7 +66,7 @@ The default server port is `8080`. The default datasource is `jdbc:postgresql://
 docker compose up --build
 ```
 
-`compose.yaml` starts the application on port `8080`, PostgreSQL on `5432`, RabbitMQ on `5672`/`15672`, and Redis on `6379`.
+`compose.yaml` currently defines the application on port `8080` and PostgreSQL on `5432`. It still contains `server.depends_on` references to `message-br` and `cache`, but those services are not defined in the current file.
 
 ## Tests
 

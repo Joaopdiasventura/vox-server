@@ -29,7 +29,7 @@ flowchart TD
     BallotService --> Repositories[Spring Data repositories]
     Services --> Repositories
     Repositories --> Postgres[(PostgreSQL)]
-    BallotService --> Broker[Simple STOMP broker /topic]
+    BallotService --> Broker["Simple STOMP broker /topic"]
     Broker --> STOMP
     Services --> Mail[JavaMailSender]
     Security[JwtAuthFilter + SecurityService] --> Controllers

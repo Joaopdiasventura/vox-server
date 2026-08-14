@@ -42,7 +42,7 @@ flowchart LR
     BallotService --> Messaging[SimpMessagingTemplate]
     UserService[UserService] --> SecurityService[SecurityService]
     UserService --> MailService[MailService]
-    Repositories --> JPA[JPA/Hibernate]
+    Repositories --> JPA["JPA/Hibernate"]
 ```
 
 Services call other services when they need an entity owned by another feature. For example, `VoteService.create` calls `CandidateService.findById` and `BallotService.findByIdLocked`; `CandidateService.create` calls `ElectionService.findById`; `ElectionService.create` calls `UserService.findById`.
@@ -72,4 +72,4 @@ sequenceDiagram
 
 ## External Integrations
 
-PostgreSQL is the configured datasource. Mail uses Spring Mail with SMTP properties. WebSocket/STOMP uses Spring WebSocket with a simple broker enabled for `/topic`. The Maven build includes Spring Cloud Stream and the Rabbit binder, and `compose.yaml` starts RabbitMQ, but no stream binding functions or channel configuration are present in the source code. Redis is configured through `spring.data.redis.url` and provided in Docker Compose, but no Redis repository, template, or cache usage appears in the code.
+PostgreSQL is the configured datasource. Mail uses Spring Mail with SMTP properties. WebSocket/STOMP uses Spring WebSocket with a simple broker enabled for `/topic`. The Maven build still includes Spring Cloud Stream and the Rabbit binder, but `application.properties` no longer configures RabbitMQ and no stream binding functions or channel configuration are present in the source code. The current `compose.yaml` no longer defines RabbitMQ or Redis services. Redis is not configured in `application.properties`, and no Redis repository, template, or cache usage appears in the code.

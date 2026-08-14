@@ -14,8 +14,6 @@
 - defaults de datasource PostgreSQL: `jdbc:postgresql://localhost:5432/vox`, `postgres`, `postgres`
 - `spring.jpa.hibernate.ddl-auto=${JPA_DDL_AUTO:update}`
 - flags de log SQL via `JPA_SHOW_SQL` e `JPA_FORMAT_SQL`
-- endereço RabbitMQ e propriedades de retry de listener
-- propriedade de URL Redis
 - host, porta, usuário, senha e flags TLS/auth de SMTP
 - `app.mail.from`
 - `app.instance-id`
@@ -33,10 +31,10 @@ Nenhum Spring profile é definido no código versionado.
 
 - `server`, buildado a partir do Dockerfile local e publicado em `8080:8080`.
 - `db`, `postgres:17-alpine`, banco `vox`, publicado em `5432:5432`.
-- `message-br`, `rabbitmq:4-management`, publicado em `5672` e `15672`.
-- `cache`, `redis:8-alpine`, publicado em `6379`.
 
-O server depende de PostgreSQL, RabbitMQ e Redis saudáveis.
+O arquivo atual ainda define `KAFKA_BOOTSTRAP_SERVERS` e `REDIS_URL` no ambiente do `server`, mas as propriedades da aplicação presentes neste repositório não consomem esses valores. O arquivo atual também ainda possui entradas `server.depends_on` para `message-br` e `cache`, enquanto esses serviços não são mais definidos em `compose.yaml`; como está, o Compose fica inconsistente até que essas referências sejam removidas ou os serviços sejam restaurados.
+
+A validação com `docker compose config` atualmente falha com: `service "server" depends on undefined service "message-br": invalid compose project`.
 
 ## Comandos
 
@@ -57,3 +55,5 @@ Docker:
 ```bash
 docker compose up --build
 ```
+
+O comando Docker acima é o ponto de entrada pretendido, mas o `compose.yaml` atual precisa ficar internamente consistente antes de ser usado com segurança em uma execução local completa em containers.
