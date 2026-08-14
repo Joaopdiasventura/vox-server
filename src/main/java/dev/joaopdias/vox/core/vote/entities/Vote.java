@@ -20,7 +20,7 @@ import java.util.UUID;
 @Table(
         name = "votes",
         indexes = {
-                @Index(name = "idx_vote_candidate_ballot_id", columnList = "fk_candidate_id, fk_candidate_id")
+                @Index(name = "idx_vote_candidate_ballot_id", columnList = "fk_candidate_id, fk_ballot_id")
         }
 )
 public class Vote {
