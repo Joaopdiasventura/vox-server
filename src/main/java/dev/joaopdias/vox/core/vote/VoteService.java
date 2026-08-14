@@ -39,7 +39,7 @@ public class VoteService {
     public String create(CreateVoteDto createVoteDto) {
         Candidate candidate = this.candidateService.findById(createVoteDto.candidateId());
 
-        Ballot ballot = this.ballotService.findById(createVoteDto.ballotId());
+        Ballot ballot = this.ballotService.findByIdLocked(createVoteDto.ballotId());
 
         if (!ballot.getIsOpen())
             throw new ResponseStatusException(

@@ -68,6 +68,11 @@ public class BallotService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Urna não encontrada"));
     }
 
+    public Ballot findByIdLocked(UUID id) {
+        return this.ballotRepository.findByIdLocked(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Urna não encontrada"));
+    }
+
     public Page<BallotResponseDto> findByUserId(UUID userId, Pageable pageable) {
         return this.ballotRepository.findByUserId(userId, pageable)
                 .map(Ballot::toResponseDto);
