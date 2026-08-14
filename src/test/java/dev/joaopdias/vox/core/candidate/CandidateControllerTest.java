@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -65,6 +66,8 @@ class CandidateControllerTest {
         UUID electionId = UUID.randomUUID();
         Pageable pageable = PageRequest.of(1, 10);
         CandidateResponseDto response = candidateResponse("Ana");
+        when(candidateService.findManyByElection(electionId, pageable))
+                .thenReturn(new PageImpl<>(List.of(response), pageable, 1));
 
         List<CandidateResponseDto> result = controller.findManyByElection(electionId, pageable).toList();
 

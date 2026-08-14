@@ -13,7 +13,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import dev.joaopdias.vox.core.candidate.entities.Candidate;
+import java.time.Instant;
+
+import dev.joaopdias.vox.core.candidate.dto.CandidateResponseDto;
 import dev.joaopdias.vox.core.vote.dto.CreateVoteDto;
 import dev.joaopdias.vox.core.vote.dto.VoteResultDto;
 
@@ -53,10 +55,7 @@ class VoteControllerTest {
         verify(voteService).findResult(electionId, ballotId);
     }
 
-    private static Candidate candidate(UUID id, String name) {
-        Candidate candidate = new Candidate();
-        candidate.setId(id);
-        candidate.setName(name);
-        return candidate;
+    private static CandidateResponseDto candidate(UUID id, String name) {
+        return new CandidateResponseDto(id, name, Instant.parse("2026-01-01T00:00:00Z"));
     }
 }

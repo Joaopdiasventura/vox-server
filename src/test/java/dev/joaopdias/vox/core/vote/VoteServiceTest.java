@@ -23,6 +23,7 @@ import org.springframework.web.server.ResponseStatusException;
 import dev.joaopdias.vox.core.ballot.BallotService;
 import dev.joaopdias.vox.core.ballot.entities.Ballot;
 import dev.joaopdias.vox.core.candidate.CandidateService;
+import dev.joaopdias.vox.core.candidate.dto.CandidateResponseDto;
 import dev.joaopdias.vox.core.candidate.entities.Candidate;
 import dev.joaopdias.vox.core.vote.dto.CreateVoteDto;
 import dev.joaopdias.vox.core.vote.dto.VoteResultDto;
@@ -123,7 +124,7 @@ class VoteServiceTest {
     void findResultDelegatesToRepository() {
         UUID electionId = UUID.randomUUID();
         UUID ballotId = UUID.randomUUID();
-        VoteResultDto resultDto = new VoteResultDto(2L, candidate(UUID.randomUUID(), "Ana"));
+        VoteResultDto resultDto = new VoteResultDto(2L, candidateResponse(UUID.randomUUID(), "Ana"));
         when(voteRepository.findResult(electionId, ballotId)).thenReturn(List.of(resultDto));
 
         List<VoteResultDto> result = service.findResult(electionId, ballotId);
@@ -137,6 +138,10 @@ class VoteServiceTest {
         candidate.setId(id);
         candidate.setName(name);
         return candidate;
+    }
+
+    private static CandidateResponseDto candidateResponse(UUID id, String name) {
+        return new CandidateResponseDto(id, name, Instant.parse("2026-01-01T00:00:00Z"));
     }
 
     private static Ballot ballot(UUID id, Boolean isOpen, Instant startAt, Instant endAt) {

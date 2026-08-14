@@ -2,11 +2,12 @@ package dev.joaopdias.vox.core.vote.dto;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.time.Instant;
 import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 
-import dev.joaopdias.vox.core.candidate.entities.Candidate;
+import dev.joaopdias.vox.core.candidate.dto.CandidateResponseDto;
 
 class VoteDtoTest {
     @Test
@@ -22,9 +23,11 @@ class VoteDtoTest {
 
     @Test
     void voteResultDtoPreservesFields() {
-        Candidate candidate = new Candidate();
-        candidate.setId(UUID.randomUUID());
-        candidate.setName("Ana");
+        CandidateResponseDto candidate = new CandidateResponseDto(
+                UUID.randomUUID(),
+                "Ana",
+                Instant.parse("2026-01-01T00:00:00Z")
+        );
 
         VoteResultDto dto = new VoteResultDto(5L, candidate);
 

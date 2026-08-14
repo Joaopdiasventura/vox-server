@@ -9,6 +9,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 import dev.joaopdias.vox.core.ballot.dto.BallotResponseDto;
+import dev.joaopdias.vox.core.election.dto.ElectionResponseDto;
 import dev.joaopdias.vox.core.election.entities.Election;
 
 class BallotTest {
@@ -20,15 +21,21 @@ class BallotTest {
         Ballot ballot = new Ballot();
         ballot.setId(UUID.randomUUID());
         ballot.setElections(elections);
+        ballot.setIsOpen(Boolean.FALSE);
         ballot.setStartAt(startAt);
         ballot.setEndAt(endAt);
 
         BallotResponseDto response = ballot.toResponseDto();
 
         assertThat(response.id()).isEqualTo(ballot.getId());
-        assertThat(response.elections()).isEqualTo(elections);
+        assertThat(response.elections()).isEqualTo(Set.of(electionResponse(elections.iterator().next())));
+        assertThat(response.isOpen()).isFalse();
         assertThat(response.startAt()).isEqualTo(startAt);
         assertThat(response.endAt()).isEqualTo(endAt);
+    }
+
+    private static ElectionResponseDto electionResponse(Election election) {
+        return new ElectionResponseDto(election.getId(), election.getName(), election.getCreatedAt());
     }
 
     private static Election election(UUID id) {

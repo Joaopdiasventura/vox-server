@@ -4,6 +4,7 @@ import dev.joaopdias.vox.core.ballot.dto.BallotResponseDto;
 import dev.joaopdias.vox.core.ballot.dto.CreateBallotDto;
 import dev.joaopdias.vox.core.ballot.entities.Ballot;
 import dev.joaopdias.vox.core.election.ElectionService;
+import dev.joaopdias.vox.core.election.dto.ElectionResponseDto;
 import dev.joaopdias.vox.core.election.entities.Election;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -79,6 +80,7 @@ class BallotServiceTest {
         when(ballotRepository.save(any(Ballot.class))).thenAnswer(invocation -> {
             Ballot ballot = invocation.getArgument(0);
             ballot.setId(UUID.randomUUID());
+            ballot.setIsOpen(Boolean.FALSE);
             return ballot;
         });
 
@@ -91,9 +93,17 @@ class BallotServiceTest {
         assertThat(savedBallot.getStartAt()).isEqualTo(START_AT);
         assertThat(savedBallot.getEndAt()).isEqualTo(END_AT);
         assertThat(response.id()).isEqualTo(savedBallot.getId());
-        assertThat(response.elections()).containsExactlyInAnyOrder(firstElection, secondElection);
+        assertThat(response.elections()).containsExactlyInAnyOrder(
+                electionResponse(firstElection),
+                electionResponse(secondElection)
+        );
+        assertThat(response.isOpen()).isFalse();
         assertThat(response.startAt()).isEqualTo(START_AT);
         assertThat(response.endAt()).isEqualTo(END_AT);
+    }
+
+    private static ElectionResponseDto electionResponse(Election election) {
+        return new ElectionResponseDto(election.getId(), election.getName(), election.getCreatedAt());
     }
 
     @Test
@@ -144,21 +154,17 @@ class BallotServiceTest {
     }
 
     @Test
-    void findByElectionsChecksElectionsAndMapsBallotsToResponseDtos() {
-        UUID firstElectionId = UUID.randomUUID();
-        UUID secondElectionId = UUID.randomUUID();
-        Set<UUID> electionsId = Set.of(firstElectionId, secondElectionId);
+    void findByUserIdMapsBallotsToResponseDtos() {
+        UUID userId = UUID.randomUUID();
         Pageable pageable = PageRequest.of(0, 10);
         Ballot first = ballot(UUID.randomUUID(), START_AT, END_AT);
         Ballot second = ballot(UUID.randomUUID(), START_AT.plusSeconds(3600), END_AT.plusSeconds(3600));
-        when(ballotRepository.findDistinctByElections_IdIn(electionsId, pageable))
+        when(ballotRepository.findByUserId(userId, pageable))
                 .thenReturn(new PageImpl<>(List.of(first, second)));
 
-        List<BallotResponseDto> result = service.findByElections(electionsId, pageable).toList();
+        List<BallotResponseDto> result = service.findByUserId(userId, pageable).toList();
 
-        verify(electionService).findById(firstElectionId);
-        verify(electionService).findById(secondElectionId);
-        verify(ballotRepository).findDistinctByElections_IdIn(electionsId, pageable);
+        verify(ballotRepository).findByUserId(userId, pageable);
         assertThat(result).containsExactly(first.toResponseDto(), second.toResponseDto());
     }
 

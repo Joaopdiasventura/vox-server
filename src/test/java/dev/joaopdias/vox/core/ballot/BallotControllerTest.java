@@ -6,16 +6,16 @@ import static org.mockito.Mockito.when;
 
 import java.lang.reflect.Method;
 import java.time.Instant;
-import java.util.List;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Stream;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -23,7 +23,9 @@ import org.springframework.web.bind.annotation.PathVariable;
 import dev.joaopdias.vox.core.ballot.dto.BallotResponseDto;
 import dev.joaopdias.vox.core.ballot.dto.CreateBallotDto;
 import dev.joaopdias.vox.core.ballot.entities.Ballot;
+import dev.joaopdias.vox.core.election.dto.ElectionResponseDto;
 import dev.joaopdias.vox.core.election.entities.Election;
+import dev.joaopdias.vox.shared.security.AuthenticatedUser;
 
 @ExtendWith(MockitoExtension.class)
 class BallotControllerTest {
@@ -43,7 +45,7 @@ class BallotControllerTest {
     @Test
     void createDelegatesToServiceAndReturnsResponse() {
         CreateBallotDto request = new CreateBallotDto(Set.of(UUID.randomUUID()), START_AT, END_AT);
-        BallotResponseDto response = ballotResponse(Set.of(election(UUID.randomUUID())));
+        BallotResponseDto response = ballotResponse(Set.of(electionResponse(UUID.randomUUID())));
         when(ballotService.create(request)).thenReturn(response);
 
         BallotResponseDto result = controller.create(request);
@@ -53,16 +55,17 @@ class BallotControllerTest {
     }
 
     @Test
-    void findByElectionsDelegatesToServiceUsingElectionIdsAndPageable() {
-        Set<UUID> electionsId = Set.of(UUID.randomUUID(), UUID.randomUUID());
+    void findByUserIdDelegatesToServiceUsingAuthenticatedUserAndPageable() {
+        AuthenticatedUser user = new AuthenticatedUser(UUID.randomUUID());
         Pageable pageable = PageRequest.of(1, 10);
-        BallotResponseDto response = ballotResponse(Set.of(election(UUID.randomUUID())));
-        when(ballotService.findByElections(electionsId, pageable)).thenReturn(Stream.of(response));
+        BallotResponseDto response = ballotResponse(Set.of(electionResponse(UUID.randomUUID())));
+        Page<BallotResponseDto> page = new PageImpl<>(java.util.List.of(response), pageable, 1);
+        when(ballotService.findByUserId(user.id(), pageable)).thenReturn(page);
 
-        List<BallotResponseDto> result = controller.findByElections(electionsId, pageable).toList();
+        Page<BallotResponseDto> result = controller.findByUserId(user, pageable);
 
-        assertThat(result).containsExactly(response);
-        verify(ballotService).findByElections(electionsId, pageable);
+        assertThat(result).isEqualTo(page);
+        verify(ballotService).findByUserId(user.id(), pageable);
     }
 
     @Test
@@ -92,8 +95,12 @@ class BallotControllerTest {
         verify(ballotService).delete(id);
     }
 
-    private static BallotResponseDto ballotResponse(Set<Election> elections) {
-        return new BallotResponseDto(UUID.randomUUID(), elections, START_AT, END_AT);
+    private static BallotResponseDto ballotResponse(Set<ElectionResponseDto> elections) {
+        return new BallotResponseDto(UUID.randomUUID(), elections, false, START_AT, END_AT);
+    }
+
+    private static ElectionResponseDto electionResponse(UUID id) {
+        return new ElectionResponseDto(id, "Eleição 2026", START_AT);
     }
 
     private static Ballot ballot(UUID id, Set<Election> elections, Instant startAt, Instant endAt) {
